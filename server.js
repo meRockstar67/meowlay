@@ -17,6 +17,16 @@ const PASSWORD = process.env.MOD_PASSWORD || 'meowh0cki2026';
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Защита от полного падения сервера: если где-то вылетит необработанная
+// ошибка, просто логируем её и продолжаем работать, вместо того чтобы
+// ронять весь процесс целиком
+process.on('uncaughtException', (err) => {
+  console.error('Необработанная ошибка (сервер продолжает работать):', err);
+});
+process.on('unhandledRejection', (err) => {
+  console.error('Необработанный rejection (сервер продолжает работать):', err);
+});
+
 let mediaItems = {};   // id -> {id, type, url, x, y, w, h, z, zoom, offsetX, offsetY, videoId?}
 let history = [];      // [{ id, kind: 'stroke'|'shape'|'text', ... }]
 let folders = {};      // id -> { id, name, memberIds: [] }
@@ -56,14 +66,41 @@ loadState();
 
 // --- Универсальная отмена (Ctrl+Z) ---
 // Перед КАЖДЫМ значимым действием клиент присылает 'checkpoint' — мы
-// сохраняем полный снимок состояния "до" этого действия. Ctrl+Z достаёт
-// последний снимок и полностью восстанавливает по нему сцену у всех.
+// сохраняем снимок состояния "до" этого действия. Ctrl+Z достаёт последний
+// снимок и полностью восстанавливает по нему сцену у всех.
+//
+// ВАЖНО: раньше тут использовался JSON.stringify всего состояния, что при
+// каждом чекпоинте ПОЛНОСТЬЮ дублировало base64-содержимое картинок/гифок/
+// видео в памяти. При нескольких загруженных медиа и десятках чекпоинтов
+// (а они шлются часто — при каждом перетаскивании, клике и т.д.) память
+// сервера быстро забивалась под завязку и Render его перезапускал — из-за
+// этого всё "пропадало". Теперь копируем только сами объекты-обёртки
+// (x, y, поворот и т.д.), а сама строка с base64-файлом (item.url) не
+// копируется — переиспользуется по ссылке, т.к. она не меняется между
+// чекпоинтами и в JS строки всё равно неизменяемы (immutable).
 let undoStack = [];
 let redoStack = [];
-const MAX_UNDO = 60;
+const MAX_UNDO = 25;
+
+function cloneMediaItems(items) {
+  const clone = {};
+  for (const id in items) {
+    clone[id] = Object.assign({}, items[id]); // неглубокая копия — url не дублируется
+  }
+  return clone;
+}
+
+function snapshotState() {
+  return {
+    mediaItems: cloneMediaItems(mediaItems),
+    history: history.map(h => (h.kind === 'stroke' ? { id: h.id, kind: 'stroke', segments: h.segments.slice() } : Object.assign({}, h))),
+    folders: JSON.parse(JSON.stringify(folders)), // папки маленькие, тут ок
+    nextZ
+  };
+}
 
 function pushCheckpoint() {
-  undoStack.push(JSON.stringify({ mediaItems, history, folders, nextZ }));
+  undoStack.push(snapshotState());
   if (undoStack.length > MAX_UNDO) undoStack.shift();
   // Новое действие "обнуляет" возможность повторить то, что было отменено раньше
   redoStack = [];
@@ -112,9 +149,9 @@ io.on('connection', (socket) => {
   socket.on('undo', () => {
     if (!authed) return;
     if (undoStack.length === 0) return;
-    redoStack.push(JSON.stringify({ mediaItems, history, folders, nextZ }));
+    redoStack.push(snapshotState());
     if (redoStack.length > MAX_UNDO) redoStack.shift();
-    const snapshot = JSON.parse(undoStack.pop());
+    const snapshot = undoStack.pop();
     mediaItems = snapshot.mediaItems;
     history = snapshot.history;
     folders = snapshot.folders;
@@ -126,9 +163,9 @@ io.on('connection', (socket) => {
   socket.on('redo', () => {
     if (!authed) return;
     if (redoStack.length === 0) return;
-    undoStack.push(JSON.stringify({ mediaItems, history, folders, nextZ }));
+    undoStack.push(snapshotState());
     if (undoStack.length > MAX_UNDO) undoStack.shift();
-    const snapshot = JSON.parse(redoStack.pop());
+    const snapshot = redoStack.pop();
     mediaItems = snapshot.mediaItems;
     history = snapshot.history;
     folders = snapshot.folders;
