@@ -164,6 +164,7 @@ function applyPosition(el, item) {
 // не играло невидимым фоном
 function applyHiddenState(el, item) {
   el.style.display = item.hidden ? 'none' : '';
+  el.style.opacity = (item.opacity !== undefined ? item.opacity : 100) / 100;
   if (item.type === 'video') {
     const v = document.getElementById('vid-' + item.id);
     if (v) {
@@ -300,6 +301,7 @@ function updateMediaPosition(data) {
     if (data.hidden !== undefined) cached.hidden = data.hidden;
     if (data.loop !== undefined) cached.loop = data.loop;
     if (data.volume !== undefined) cached.volume = data.volume;
+    if (data.opacity !== undefined) cached.opacity = data.opacity;
   }
   const el = document.getElementById('m-' + data.id);
   if (el) {

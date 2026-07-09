@@ -504,7 +504,7 @@ function sendUpdate(item) {
     id: item.id, x: item.x, y: item.y, w: item.w, h: item.h,
     zoom: item.zoom || 1, offsetX: item.offsetX || 0, offsetY: item.offsetY || 0,
     fontScale: item.fontScale, color: item.color,
-    hidden: item.hidden, loop: item.loop, volume: item.volume
+    hidden: item.hidden, loop: item.loop, volume: item.volume, opacity: item.opacity
   });
 }
 
@@ -528,7 +528,7 @@ function applyPosition(el, item) {
   el.style.top = (item.y * 100) + '%';
   el.style.width = (item.w * 100) + '%';
   el.style.height = (item.h * 100) + '%';
-  el.style.opacity = item.hidden ? '0.35' : '1';
+  el.style.opacity = item.hidden ? '0.35' : ((item.opacity !== undefined ? item.opacity : 100) / 100);
   if (item.type === 'text') {
     const textDiv = el.querySelector('.text-content');
     if (textDiv) {
@@ -554,6 +554,7 @@ function createOrUpdateMedia(item) {
   if (item.hidden === undefined) item.hidden = false;
   if (item.loop === undefined) item.loop = false;
   if (item.volume === undefined) item.volume = 100;
+  if (item.opacity === undefined) item.opacity = 100;
   mediaItemsLocal[item.id] = item;
 
   let el = document.getElementById('cm-' + item.id);
@@ -818,12 +819,19 @@ socket.on('update-media', (data) => {
   if (data.hidden !== undefined) item.hidden = data.hidden;
   if (data.loop !== undefined) item.loop = data.loop;
   if (data.volume !== undefined) item.volume = data.volume;
+  if (data.opacity !== undefined) item.opacity = data.opacity;
   const el = document.getElementById('cm-' + data.id);
   if (el) {
     applyPosition(el, item);
     applyCropTransform(el, item);
     const obsSlider = document.getElementById('obsvol-' + data.id);
     if (obsSlider && data.volume !== undefined) obsSlider.value = data.volume;
+    const obsVal = document.getElementById('obsvol-' + data.id + '-val');
+    if (obsVal && data.volume !== undefined) obsVal.textContent = data.volume + '%';
+    const opacitySlider = document.getElementById('opacity-' + data.id);
+    if (opacitySlider && data.opacity !== undefined) opacitySlider.value = data.opacity;
+    const opacityVal = document.getElementById('opacity-' + data.id + '-val');
+    if (opacityVal && data.opacity !== undefined) opacityVal.textContent = data.opacity + '%';
     const hideBtnEl = el.querySelector('.item-btn:nth-child(3)');
     if (hideBtnEl) hideBtnEl.textContent = item.hidden ? '🙈' : '👁';
   }
@@ -986,6 +994,53 @@ mediaListEl.addEventListener('dragend', () => {
   socket.emit('reorder-media', order);
 });
 
+// Удобный контрол "минус / ползунок / цифра% / плюс" — используется и для
+// громкости, и для прозрачности. Кнопки шагают на step% за клик, так что
+// не нужно точно попадать мышкой по ползунку.
+function createPercentControl(idSuffix, labelText, initialValue, step, title, onChange) {
+  const wrap = document.createElement('div');
+  wrap.style.display = 'flex'; wrap.style.alignItems = 'center'; wrap.style.gap = '3px';
+  if (title) wrap.title = title;
+
+  const lbl = document.createElement('span');
+  lbl.textContent = labelText; lbl.style.fontSize = '12px';
+
+  const minusBtn = document.createElement('button');
+  minusBtn.textContent = '−'; minusBtn.className = 'secondary';
+  minusBtn.style.padding = '2px 7px'; minusBtn.style.fontSize = '13px';
+
+  const slider = document.createElement('input');
+  slider.type = 'range'; slider.min = 0; slider.max = 100; slider.value = initialValue;
+  slider.style.width = '70px';
+  slider.id = idSuffix;
+
+  const valSpan = document.createElement('span');
+  valSpan.id = idSuffix + '-val';
+  valSpan.textContent = initialValue + '%';
+  valSpan.style.fontSize = '12px'; valSpan.style.minWidth = '32px'; valSpan.style.textAlign = 'center';
+
+  const plusBtn = document.createElement('button');
+  plusBtn.textContent = '+'; plusBtn.className = 'secondary';
+  plusBtn.style.padding = '2px 7px'; plusBtn.style.fontSize = '13px';
+
+  function setValue(v) {
+    v = Math.max(0, Math.min(100, v));
+    slider.value = v;
+    valSpan.textContent = v + '%';
+    onChange(v);
+  }
+  minusBtn.onclick = () => setValue(parseInt(slider.value, 10) - step);
+  plusBtn.onclick = () => setValue(parseInt(slider.value, 10) + step);
+  slider.oninput = () => setValue(parseInt(slider.value, 10));
+
+  wrap.appendChild(lbl);
+  wrap.appendChild(minusBtn);
+  wrap.appendChild(slider);
+  wrap.appendChild(valSpan);
+  wrap.appendChild(plusBtn);
+  return wrap;
+}
+
 function addMediaToList(item) {
   const li = document.createElement('li');
   li.id = 'li-' + item.id;
@@ -1071,7 +1126,7 @@ function addMediaToList(item) {
 
   if (item.type === 'youtube') {
     const ytControls = document.createElement('div');
-    ytControls.style.display = 'flex'; ytControls.style.gap = '6px'; ytControls.style.alignItems = 'center';
+    ytControls.style.display = 'flex'; ytControls.style.gap = '6px'; ytControls.style.alignItems = 'center'; ytControls.style.flexWrap = 'wrap';
 
     const playBtn = document.createElement('button');
     playBtn.textContent = '▶'; playBtn.className = 'secondary'; playBtn.title = 'Запустить';
@@ -1081,18 +1136,13 @@ function addMediaToList(item) {
     pauseBtn.textContent = '⏸'; pauseBtn.className = 'secondary'; pauseBtn.title = 'Пауза';
     pauseBtn.onclick = () => socket.emit('youtube-control', { id: item.id, action: 'pause' });
 
-    const volLabel = document.createElement('span');
-    volLabel.textContent = '🔊'; volLabel.style.fontSize = '12px';
-
-    const volInput = document.createElement('input');
-    volInput.type = 'range'; volInput.min = 0; volInput.max = 100; volInput.value = 100;
-    volInput.style.width = '80px';
-    volInput.oninput = () => socket.emit('youtube-control', { id: item.id, action: 'volume', value: parseInt(volInput.value, 10) });
+    const volControl = createPercentControl('ytvol-' + item.id, '🔊', 100, 5, 'Громкость на стриме', (v) => {
+      socket.emit('youtube-control', { id: item.id, action: 'volume', value: v });
+    });
 
     ytControls.appendChild(playBtn);
     ytControls.appendChild(pauseBtn);
-    ytControls.appendChild(volLabel);
-    ytControls.appendChild(volInput);
+    ytControls.appendChild(volControl);
     li.appendChild(ytControls);
   }
 
@@ -1133,41 +1183,39 @@ function addMediaToList(item) {
     loopLabel.appendChild(loopCheckbox);
     loopLabel.appendChild(document.createTextNode('Зациклить'));
 
-    const obsVolLabel = document.createElement('span');
-    obsVolLabel.textContent = '🔊 OBS:'; obsVolLabel.style.fontSize = '12px';
-    const obsVolInput = document.createElement('input');
-    obsVolInput.id = 'obsvol-' + item.id;
-    obsVolInput.type = 'range'; obsVolInput.min = 0; obsVolInput.max = 100; obsVolInput.value = item.volume;
-    obsVolInput.style.width = '70px';
-    obsVolInput.title = 'Громкость в OBS (на стриме)';
-    obsVolInput.oninput = () => {
-      item.volume = parseInt(obsVolInput.value, 10);
+    const obsVolControl = createPercentControl('obsvol-' + item.id, '🔊 OBS', item.volume, 5, 'Громкость в OBS (на стриме)', (v) => {
+      item.volume = v;
       sendUpdate(item);
-    };
+    });
 
-    const siteVolLabel = document.createElement('span');
-    siteVolLabel.textContent = '🎧 Сайт:'; siteVolLabel.style.fontSize = '12px';
-    const siteVolInput = document.createElement('input');
-    siteVolInput.type = 'range'; siteVolInput.min = 0; siteVolInput.max = 100; siteVolInput.value = 0;
-    siteVolInput.style.width = '70px';
-    siteVolInput.title = 'Громкость только у тебя на сайте (не влияет на стрим)';
-    siteVolInput.oninput = () => {
+    const siteVolControl = createPercentControl('sitevol-' + item.id, '🎧 Сайт', 0, 5, 'Громкость только у тебя на сайте (не влияет на стрим)', (v) => {
       const localVid = document.getElementById('vid-' + item.id);
       if (localVid) {
         localVid.muted = false;
-        localVid.volume = parseInt(siteVolInput.value, 10) / 100;
+        localVid.volume = v / 100;
       }
-    };
+    });
 
     vControls.appendChild(playBtn);
     vControls.appendChild(pauseBtn);
     vControls.appendChild(loopLabel);
-    vControls.appendChild(obsVolLabel);
-    vControls.appendChild(obsVolInput);
-    vControls.appendChild(siteVolLabel);
-    vControls.appendChild(siteVolInput);
+    vControls.appendChild(obsVolControl);
+    vControls.appendChild(siteVolControl);
     li.appendChild(vControls);
   }
+
+  // Прозрачность — доступна для любого типа объекта
+  const opacityControl = createPercentControl(
+    'opacity-' + item.id, '👻 Прозрачность', item.opacity, 5,
+    'Прозрачность на стриме (100% — полностью видно)',
+    (v) => {
+      item.opacity = v;
+      const el = document.getElementById('cm-' + item.id);
+      if (el) applyPosition(el, item);
+      sendUpdate(item);
+    }
+  );
+  li.appendChild(opacityControl);
 
   const btn = document.createElement('button');
   btn.textContent = 'Убрать';
