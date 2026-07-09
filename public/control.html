@@ -156,6 +156,7 @@ socket.on('state', (state) => {
 const canvasWrap = document.getElementById('canvas-wrap');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
+let historyList = [];
 
 function resizeCanvas() {
   const rect = canvasWrap.getBoundingClientRect();
@@ -178,8 +179,6 @@ document.querySelectorAll('.tool-btn').forEach((btn) => {
 
 const colorInput = document.getElementById('color');
 const sizeInput = document.getElementById('size');
-
-let historyList = [];
 
 function drawSegment(d) {
   ctx.globalCompositeOperation = d.erase ? 'destination-out' : 'source-over';
