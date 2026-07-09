@@ -795,6 +795,19 @@ socket.on('clear-media', () => {
   for (const k in mediaItemsLocal) delete mediaItemsLocal[k];
   selectedIds.clear();
 });
+socket.on('rename-media', (data) => {
+  const item = mediaItemsLocal[data.id];
+  if (!item) return;
+  item.label = data.label;
+  const labelSpan = document.getElementById('label-' + data.id);
+  if (labelSpan) {
+    const typeLabel = item.type === 'image' ? 'Картинка' : item.type === 'youtube' ? 'YouTube' : item.type === 'text' ? 'Текст' : 'OBS Ninja';
+    const shortUrl = item.type === 'text'
+      ? '"' + item.text.slice(0, 25) + '"'
+      : (item.url.startsWith('data:') ? '(загружено с компьютера)' : item.url.slice(0, 30));
+    labelSpan.textContent = item.label ? item.label : (typeLabel + ': ' + shortUrl);
+  }
+});
 socket.on('folders-sync', (f) => {
   foldersLocal = f || {};
   renderFoldersList();
@@ -919,14 +932,28 @@ function addMediaToList(item) {
   dragHandle.textContent = '⠿';
   li.appendChild(dragHandle);
 
-  const label = item.type === 'image' ? 'Картинка' : item.type === 'youtube' ? 'YouTube' : item.type === 'text' ? 'Текст' : 'OBS Ninja';
+  const typeLabel = item.type === 'image' ? 'Картинка' : item.type === 'youtube' ? 'YouTube' : item.type === 'text' ? 'Текст' : 'OBS Ninja';
   const shortUrl = item.type === 'text'
     ? '"' + item.text.slice(0, 25) + '"'
     : (item.url.startsWith('data:') ? '(загружено с компьютера)' : item.url.slice(0, 30));
   const labelSpan = document.createElement('span');
-  labelSpan.textContent = label + ': ' + shortUrl;
+  labelSpan.id = 'label-' + item.id;
+  labelSpan.textContent = item.label ? item.label : (typeLabel + ': ' + shortUrl);
   labelSpan.style.flex = '1';
   li.appendChild(labelSpan);
+
+  const renameBtn = document.createElement('button');
+  renameBtn.textContent = '✏️';
+  renameBtn.className = 'secondary';
+  renameBtn.title = 'Переименовать';
+  renameBtn.onclick = () => {
+    const newName = prompt('Название для этого объекта:', item.label || (typeLabel + ': ' + shortUrl));
+    if (newName === null) return;
+    item.label = newName.trim();
+    labelSpan.textContent = item.label ? item.label : (typeLabel + ': ' + shortUrl);
+    socket.emit('rename-media', { id: item.id, label: item.label });
+  };
+  li.appendChild(renameBtn);
 
   // Выбор папки для объекта
   const folderSelect = document.createElement('select');
