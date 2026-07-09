@@ -43,7 +43,7 @@
       linear-gradient(-45deg, #444 25%, transparent 25%),
       linear-gradient(45deg, transparent 75%, #444 75%),
       linear-gradient(-45deg, transparent 75%, #444 75%);
-    background-size: 20px 20px; border: 2px solid #555; overflow: hidden;
+    background-size: 20px 20px; border: 2px solid #555; overflow: visible;
   }
   #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
 
@@ -543,6 +543,15 @@ function createOrUpdateMedia(item) {
       sendUpdate(item);
     };
 
+    const returnBtn = document.createElement('button');
+    returnBtn.className = 'item-btn'; returnBtn.title = 'Вернуть в кадр'; returnBtn.textContent = '↩';
+    returnBtn.onclick = (ev) => {
+      ev.stopPropagation();
+      item.x = 0.3; item.y = 0.3;
+      applyPosition(el, item);
+      sendUpdate(item);
+    };
+
     const removeBtn = document.createElement('button');
     removeBtn.className = 'item-btn remove'; removeBtn.title = 'Удалить'; removeBtn.textContent = '✕';
     removeBtn.onclick = (ev) => {
@@ -552,6 +561,7 @@ function createOrUpdateMedia(item) {
     };
 
     controls.appendChild(fullBtn);
+    controls.appendChild(returnBtn);
     controls.appendChild(removeBtn);
     el.appendChild(controls);
 
@@ -623,8 +633,8 @@ function makeDraggable(el, item) {
         const it = mediaItemsLocal[id];
         const start = startPositions[id];
         if (!it || !start) return;
-        it.x = Math.min(Math.max(start.x + dx, -it.w + 0.02), 1 - 0.02);
-        it.y = Math.min(Math.max(start.y + dy, -it.h + 0.02), 1 - 0.02);
+        it.x = Math.min(Math.max(start.x + dx, -1.5), 2.5);
+        it.y = Math.min(Math.max(start.y + dy, -1.5), 2.5);
         const itEl = document.getElementById('cm-' + id);
         if (itEl) applyPosition(itEl, it);
         batch.push({ id: it.id, x: it.x, y: it.y, w: it.w, h: it.h });
