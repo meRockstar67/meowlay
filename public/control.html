@@ -753,13 +753,21 @@ socket.on('folders-sync', (f) => {
   refreshFolderSelects();
 });
 
+// Новые загруженные медиа появляются не в центре кадра, а рядом сбоку —
+// чтобы можно было сначала подготовить (обрезать, подписать) и только
+// потом затащить в кадр
+function getSpawnPosition() {
+  return { x: 0.05 + Math.random() * 0.55, y: 1.08 };
+}
+
 document.getElementById('add-media-btn').addEventListener('click', () => {
   if (!authed) return alert('Сначала дождись подключения (правильный пароль)');
   const type = document.getElementById('media-type').value;
   const url = document.getElementById('media-url').value.trim();
   if (!url) return;
   const id = 'id' + Date.now();
-  const item = { id, type, url, x: 0.3, y: 0.3, w: 0.4, h: 0.4, z: 9999 };
+  const spawn = getSpawnPosition();
+  const item = { id, type, url, x: spawn.x, y: spawn.y, w: 0.4, h: 0.4, z: 9999 };
   if (type === 'youtube') {
     const vid = extractYoutubeId(url);
     if (!vid) return alert('Не получилось распознать ссылку на YouTube');
@@ -783,7 +791,8 @@ document.getElementById('media-file').addEventListener('change', (e) => {
   const reader = new FileReader();
   reader.onload = () => {
     const id = 'id' + Date.now();
-    const item = { id, type: 'image', url: reader.result, x: 0.3, y: 0.3, w: 0.4, h: 0.4, z: 9999 };
+    const spawn = getSpawnPosition();
+    const item = { id, type: 'image', url: reader.result, x: spawn.x, y: spawn.y, w: 0.4, h: 0.4, z: 9999 };
     socket.emit('add-media', item);
     createOrUpdateMedia(item);
     sortMediaList();
