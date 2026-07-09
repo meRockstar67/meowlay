@@ -50,7 +50,11 @@
   #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; z-index: 1; }
 
   #media-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
-  .media-item { position: absolute; border: 2px dashed #5865f2; pointer-events: auto; cursor: move; }
+  .media-item {
+    position: absolute; border: 2px dashed #5865f2; pointer-events: auto; cursor: move;
+    user-select: none; -webkit-user-select: none; -moz-user-select: none;
+  }
+  .media-item * { user-select: none; -webkit-user-select: none; -moz-user-select: none; -webkit-user-drag: none; }
   .media-item.selected { border: 3px solid #ffcc00; box-shadow: 0 0 0 2px #ffcc0055; }
   .media-item img, .media-item iframe { width: 100%; height: 100%; display: block; border: 0; pointer-events: none; }
   .media-item .item-controls { position: absolute; top: -14px; right: -14px; display: flex; gap: 4px; }
@@ -555,7 +559,7 @@ function createOrUpdateMedia(item) {
     inner.style.transformOrigin = 'center center';
 
     if (item.type === 'image') {
-      inner.innerHTML = '<img src="' + item.url + '">';
+      inner.innerHTML = '<img src="' + item.url + '" draggable="false">';
     } else if (item.type === 'text') {
       const textDiv = document.createElement('div');
       textDiv.className = 'text-content';
@@ -639,6 +643,7 @@ function makeDraggable(el, item) {
   el.addEventListener('mousedown', (e) => {
     if (e.target.closest('.resize-handle') || e.target.closest('.item-btn')) return;
     e.stopPropagation();
+    e.preventDefault(); // не даём браузеру выделить/перетащить картинку нативно
 
     if (e.altKey) {
       const cropRect = el.getBoundingClientRect();
@@ -701,6 +706,7 @@ function makeDraggable(el, item) {
 function makeResizable(handle, el, item) {
   handle.addEventListener('mousedown', (e) => {
     e.stopPropagation();
+    e.preventDefault();
     if (e.altKey) {
       const zoomStartY = e.clientY;
       const startZoom = item.zoom || 1;
@@ -1069,20 +1075,41 @@ function refreshFolderSelects() {
   });
 }
 
+const expandedFolders = new Set();
+
 function renderFoldersList() {
   const foldersListEl = document.getElementById('folders-list');
   foldersListEl.innerHTML = '';
   Object.values(foldersLocal).forEach((f) => {
     const li = document.createElement('li');
+    li.style.flexDirection = 'column';
+    li.style.alignItems = 'stretch';
+
+    const topRow = document.createElement('div');
+    topRow.style.display = 'flex';
+    topRow.style.justifyContent = 'space-between';
+    topRow.style.alignItems = 'center';
+    topRow.style.gap = '6px';
+
+    const toggleBtn = document.createElement('button');
+    toggleBtn.className = 'secondary';
+    toggleBtn.textContent = expandedFolders.has(f.id) ? '▼' : '▶';
+    toggleBtn.title = 'Развернуть/свернуть';
+    toggleBtn.onclick = () => {
+      if (expandedFolders.has(f.id)) expandedFolders.delete(f.id);
+      else expandedFolders.add(f.id);
+      renderFoldersList();
+    };
 
     const label = document.createElement('span');
     label.textContent = '🗂 ' + f.name + ' (' + f.memberIds.length + ')';
+    label.style.flex = '1';
 
     const btns = document.createElement('div');
     btns.style.display = 'flex'; btns.style.gap = '6px';
 
     const selectBtn = document.createElement('button');
-    selectBtn.textContent = 'Выделить';
+    selectBtn.textContent = 'Выделить всё';
     selectBtn.onclick = () => selectMany(f.memberIds);
 
     const renameBtn = document.createElement('button');
@@ -1103,8 +1130,70 @@ function renderFoldersList() {
     btns.appendChild(selectBtn);
     btns.appendChild(renameBtn);
     btns.appendChild(delBtn);
-    li.appendChild(label);
-    li.appendChild(btns);
+    topRow.appendChild(toggleBtn);
+    topRow.appendChild(label);
+    topRow.appendChild(btns);
+    li.appendChild(topRow);
+
+    // Развёрнутый список объектов внутри папки — можно выделить по одному
+    if (expandedFolders.has(f.id)) {
+      const subList = document.createElement('ul');
+      subList.style.listStyle = 'none';
+      subList.style.padding = '0';
+      subList.style.margin = '8px 0 0 24px';
+
+      if (f.memberIds.length === 0) {
+        const emptyLi = document.createElement('li');
+        emptyLi.textContent = 'Папка пуста';
+        emptyLi.style.color = '#888';
+        emptyLi.style.fontSize = '13px';
+        emptyLi.style.padding = '4px 0';
+        subList.appendChild(emptyLi);
+      }
+
+      f.memberIds.forEach((itemId) => {
+        const it = mediaItemsLocal[itemId];
+        if (!it) return;
+        const subLi = document.createElement('li');
+        subLi.style.display = 'flex';
+        subLi.style.justifyContent = 'space-between';
+        subLi.style.alignItems = 'center';
+        subLi.style.background = '#1e1e2e';
+        subLi.style.padding = '5px 10px';
+        subLi.style.marginBottom = '4px';
+        subLi.style.borderRadius = '5px';
+
+        const typeLabel = it.type === 'image' ? 'Картинка' : it.type === 'youtube' ? 'YouTube' : it.type === 'text' ? 'Текст' : 'OBS Ninja';
+        const subLabel = document.createElement('span');
+        subLabel.textContent = it.label ? it.label : typeLabel;
+        subLabel.style.fontSize = '13px';
+
+        const subBtns = document.createElement('div');
+        subBtns.style.display = 'flex'; subBtns.style.gap = '4px';
+
+        const subSelectBtn = document.createElement('button');
+        subSelectBtn.textContent = 'Выделить';
+        subSelectBtn.className = 'secondary';
+        subSelectBtn.style.fontSize = '12px';
+        subSelectBtn.style.padding = '4px 8px';
+        subSelectBtn.onclick = () => selectOnly(itemId);
+
+        const subRemoveBtn = document.createElement('button');
+        subRemoveBtn.textContent = 'Убрать из папки';
+        subRemoveBtn.className = 'secondary';
+        subRemoveBtn.style.fontSize = '12px';
+        subRemoveBtn.style.padding = '4px 8px';
+        subRemoveBtn.onclick = () => socket.emit('assign-folder', { itemId, folderId: null });
+
+        subBtns.appendChild(subSelectBtn);
+        subBtns.appendChild(subRemoveBtn);
+        subLi.appendChild(subLabel);
+        subLi.appendChild(subBtns);
+        subList.appendChild(subLi);
+      });
+
+      li.appendChild(subList);
+    }
 
     // Перетащи строку медиа-объекта сюда — попадёт в эту папку
     li.addEventListener('dragover', (e) => {
