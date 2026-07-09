@@ -45,9 +45,11 @@
       linear-gradient(-45deg, transparent 75%, #444 75%);
     background-size: 20px 20px; border: 2px solid #555; overflow: visible;
   }
-  #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+  #twitch-embed { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; overflow: hidden; }
+  #twitch-embed iframe { width: 100%; height: 100%; border: 0; pointer-events: none; }
+  #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; z-index: 1; }
 
-  #media-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+  #media-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
   .media-item { position: absolute; border: 2px dashed #5865f2; pointer-events: auto; cursor: move; }
   .media-item.selected { border: 3px solid #ffcc00; box-shadow: 0 0 0 2px #ffcc0055; }
   .media-item img, .media-item iframe { width: 100%; height: 100%; display: block; border: 0; pointer-events: none; }
@@ -79,7 +81,14 @@
     <button id="clear-canvas-btn" class="secondary">Очистить всё</button>
   </div>
 
+  <div class="toolbar">
+    <input type="text" id="twitch-channel-input" placeholder="Ник канала на Twitch (или ссылка twitch.tv/...)" style="min-width:260px;">
+    <button id="connect-twitch-btn">📺 Подключить стрим для предпросмотра</button>
+    <button id="disconnect-twitch-btn" class="secondary">Отключить</button>
+  </div>
+
   <div id="canvas-wrap">
+    <div id="twitch-embed"></div>
     <canvas id="canvas"></canvas>
     <div id="media-layer"></div>
   </div>
@@ -95,7 +104,9 @@
     квадратик (растёт вместе с рамкой), либо ползунком "Размер" в списке
     активных медиа. В списке "Активные медиа" ниже можно тянуть строки
     мышкой, чтобы менять, что поверх чего отображается (слои), а также
-    перетаскивать их прямо на папку в разделе "Папки".
+    перетаскивать их прямо на папку в разделе "Папки". Вверху можно
+    подключить предпросмотр Twitch-стрима — тогда вместо серого фона
+    будет видно саму трансляцию, поверх которой ты рисуешь.
   </div>
 
   <h3>Добавить медиа</h3>
@@ -170,6 +181,43 @@ function resizeCanvas() {
 }
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
+
+// --- Предпросмотр Twitch-стрима как фон рабочей области ---
+function extractTwitchChannel(input) {
+  input = input.trim();
+  const m = input.match(/twitch\.tv\/([a-zA-Z0-9_]+)/i);
+  if (m) return m[1];
+  return input.replace(/^@/, '');
+}
+
+function loadTwitchEmbed(channel) {
+  const container = document.getElementById('twitch-embed');
+  const parent = location.hostname || 'localhost';
+  container.innerHTML = '<iframe src="https://player.twitch.tv/?channel=' + encodeURIComponent(channel) +
+    '&parent=' + encodeURIComponent(parent) + '&muted=true" allowfullscreen></iframe>';
+  try { localStorage.setItem('meowlay-twitch-channel', channel); } catch (e) {}
+}
+
+document.getElementById('connect-twitch-btn').addEventListener('click', () => {
+  const raw = document.getElementById('twitch-channel-input').value;
+  const channel = extractTwitchChannel(raw);
+  if (!channel) return alert('Введи ник канала на Twitch');
+  loadTwitchEmbed(channel);
+});
+
+document.getElementById('disconnect-twitch-btn').addEventListener('click', () => {
+  document.getElementById('twitch-embed').innerHTML = '';
+  try { localStorage.removeItem('meowlay-twitch-channel'); } catch (e) {}
+});
+
+// Если модератор уже подключал канал раньше — подставим его автоматически
+try {
+  const savedChannel = localStorage.getItem('meowlay-twitch-channel');
+  if (savedChannel) {
+    document.getElementById('twitch-channel-input').value = savedChannel;
+    loadTwitchEmbed(savedChannel);
+  }
+} catch (e) {}
 
 // --- Инструменты ---
 let tool = 'pen';
