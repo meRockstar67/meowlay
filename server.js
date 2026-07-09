@@ -221,6 +221,16 @@ io.on('connection', (socket) => {
     saveStateDebounced();
   });
 
+  socket.on('rename-media', (data) => {
+    if (!authed) return;
+    const item = mediaItems[data.id];
+    if (item) {
+      item.label = (data.label || '').slice(0, 60);
+    }
+    io.emit('rename-media', data);
+    saveStateDebounced();
+  });
+
   socket.on('assign-folder', (data) => {
     if (!authed) return;
     removeItemFromAllFolders(data.itemId);
