@@ -101,6 +101,8 @@ io.on('connection', (socket) => {
     if (data.zoom !== undefined) item.zoom = data.zoom;
     if (data.offsetX !== undefined) item.offsetX = data.offsetX;
     if (data.offsetY !== undefined) item.offsetY = data.offsetY;
+    if (data.fontSize !== undefined) item.fontSize = data.fontSize;
+    if (data.color !== undefined) item.color = data.color;
     socket.broadcast.emit('update-media', data);
   });
 
