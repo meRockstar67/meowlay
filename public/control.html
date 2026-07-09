@@ -504,7 +504,8 @@ function sendUpdate(item) {
     id: item.id, x: item.x, y: item.y, w: item.w, h: item.h,
     zoom: item.zoom || 1, offsetX: item.offsetX || 0, offsetY: item.offsetY || 0,
     fontScale: item.fontScale, color: item.color,
-    hidden: item.hidden, loop: item.loop, volume: item.volume, opacity: item.opacity
+    hidden: item.hidden, loop: item.loop, volume: item.volume, opacity: item.opacity,
+    rotation: item.rotation
   });
 }
 
@@ -529,6 +530,11 @@ function applyPosition(el, item) {
   el.style.width = (item.w * 100) + '%';
   el.style.height = (item.h * 100) + '%';
   el.style.opacity = item.hidden ? '0.35' : ((item.opacity !== undefined ? item.opacity : 100) / 100);
+  const viewportEl = el.querySelector('.media-viewport');
+  if (viewportEl) {
+    viewportEl.style.transform = 'rotate(' + (item.rotation || 0) + 'deg)';
+    viewportEl.style.transformOrigin = 'center center';
+  }
   if (item.type === 'text') {
     const textDiv = el.querySelector('.text-content');
     if (textDiv) {
@@ -555,6 +561,7 @@ function createOrUpdateMedia(item) {
   if (item.loop === undefined) item.loop = false;
   if (item.volume === undefined) item.volume = 100;
   if (item.opacity === undefined) item.opacity = 100;
+  if (item.rotation === undefined) item.rotation = 0;
   mediaItemsLocal[item.id] = item;
 
   let el = document.getElementById('cm-' + item.id);
@@ -564,6 +571,7 @@ function createOrUpdateMedia(item) {
     el.id = 'cm-' + item.id;
 
     const viewport = document.createElement('div');
+    viewport.className = 'media-viewport';
     viewport.style.width = '100%'; viewport.style.height = '100%';
     viewport.style.overflow = 'hidden'; viewport.style.position = 'relative';
 
@@ -849,6 +857,7 @@ socket.on('update-media', (data) => {
   if (data.loop !== undefined) item.loop = data.loop;
   if (data.volume !== undefined) item.volume = data.volume;
   if (data.opacity !== undefined) item.opacity = data.opacity;
+  if (data.rotation !== undefined) item.rotation = data.rotation;
   const el = document.getElementById('cm-' + data.id);
   if (el) {
     applyPosition(el, item);
@@ -861,6 +870,10 @@ socket.on('update-media', (data) => {
     if (opacitySlider && data.opacity !== undefined) opacitySlider.value = data.opacity;
     const opacityVal = document.getElementById('opacity-' + data.id + '-val');
     if (opacityVal && data.opacity !== undefined) opacityVal.textContent = data.opacity + '%';
+    const rotationSlider = document.getElementById('rotation-' + data.id);
+    if (rotationSlider && data.rotation !== undefined) rotationSlider.value = data.rotation;
+    const rotationVal = document.getElementById('rotation-' + data.id + '-val');
+    if (rotationVal && data.rotation !== undefined) rotationVal.textContent = data.rotation + '°';
     const hideBtnEl = el.querySelector('.item-btn:nth-child(3)');
     const isHiddenNow = item.type === 'video' ? item.opacity === 0 : item.hidden;
     if (hideBtnEl) hideBtnEl.textContent = isHiddenNow ? '🙈' : '👁';
@@ -1029,7 +1042,9 @@ mediaListEl.addEventListener('dragend', () => {
 // Удобный контрол "минус / ползунок / цифра% / плюс" — используется и для
 // громкости, и для прозрачности. Кнопки шагают на step% за клик, так что
 // не нужно точно попадать мышкой по ползунку.
-function createPercentControl(idSuffix, labelText, initialValue, step, title, onChange) {
+function createPercentControl(idSuffix, labelText, initialValue, step, title, onChange, maxValue, suffix) {
+  maxValue = maxValue !== undefined ? maxValue : 100;
+  suffix = suffix !== undefined ? suffix : '%';
   const wrap = document.createElement('div');
   wrap.style.display = 'flex'; wrap.style.alignItems = 'center'; wrap.style.gap = '3px';
   if (title) wrap.title = title;
@@ -1042,13 +1057,13 @@ function createPercentControl(idSuffix, labelText, initialValue, step, title, on
   minusBtn.style.padding = '2px 7px'; minusBtn.style.fontSize = '13px';
 
   const slider = document.createElement('input');
-  slider.type = 'range'; slider.min = 0; slider.max = 100; slider.value = initialValue;
+  slider.type = 'range'; slider.min = 0; slider.max = maxValue; slider.value = initialValue;
   slider.style.width = '70px';
   slider.id = idSuffix;
 
   const valSpan = document.createElement('span');
   valSpan.id = idSuffix + '-val';
-  valSpan.textContent = initialValue + '%';
+  valSpan.textContent = initialValue + suffix;
   valSpan.style.fontSize = '12px'; valSpan.style.minWidth = '32px'; valSpan.style.textAlign = 'center';
 
   const plusBtn = document.createElement('button');
@@ -1056,9 +1071,9 @@ function createPercentControl(idSuffix, labelText, initialValue, step, title, on
   plusBtn.style.padding = '2px 7px'; plusBtn.style.fontSize = '13px';
 
   function setValue(v) {
-    v = Math.max(0, Math.min(100, v));
+    v = Math.max(0, Math.min(maxValue, v));
     slider.value = v;
-    valSpan.textContent = v + '%';
+    valSpan.textContent = v + suffix;
     onChange(v);
   }
   minusBtn.onclick = () => setValue(parseInt(slider.value, 10) - step);
@@ -1299,6 +1314,44 @@ function addMediaToList(item) {
     }
   );
   li.appendChild(opacityControl);
+
+  // Поворот — доступен для любого типа объекта
+  const rotationWrap = document.createElement('div');
+  rotationWrap.style.display = 'flex'; rotationWrap.style.alignItems = 'center'; rotationWrap.style.gap = '4px';
+
+  function setRotation(deg) {
+    deg = ((deg % 360) + 360) % 360;
+    item.rotation = deg;
+    const el = document.getElementById('cm-' + item.id);
+    if (el) applyPosition(el, item);
+    sendUpdate(item);
+    const slider = document.getElementById('rotation-' + item.id);
+    if (slider) slider.value = deg;
+    const val = document.getElementById('rotation-' + item.id + '-val');
+    if (val) val.textContent = deg + '°';
+  }
+
+  const rotateLeftBtn = document.createElement('button');
+  rotateLeftBtn.textContent = '⟲ -90°'; rotateLeftBtn.className = 'secondary';
+  rotateLeftBtn.title = 'Повернуть на 90° против часовой';
+  rotateLeftBtn.onclick = () => setRotation((item.rotation || 0) - 90);
+
+  const rotationControl = createPercentControl(
+    'rotation-' + item.id, '🔄 Поворот', item.rotation, 15,
+    'Точный поворот в градусах',
+    (v) => setRotation(v),
+    360, '°'
+  );
+
+  const rotateRightBtn = document.createElement('button');
+  rotateRightBtn.textContent = '⟳ +90°'; rotateRightBtn.className = 'secondary';
+  rotateRightBtn.title = 'Повернуть на 90° по часовой';
+  rotateRightBtn.onclick = () => setRotation((item.rotation || 0) + 90);
+
+  rotationWrap.appendChild(rotateLeftBtn);
+  rotationWrap.appendChild(rotationControl);
+  rotationWrap.appendChild(rotateRightBtn);
+  li.appendChild(rotationWrap);
 
   const btn = document.createElement('button');
   btn.textContent = 'Убрать';

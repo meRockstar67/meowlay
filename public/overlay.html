@@ -142,6 +142,11 @@ function applyPosition(el, item) {
   el.style.top = (item.y * 100) + '%';
   el.style.width = (item.w * 100) + '%';
   el.style.height = (item.h * 100) + '%';
+  const viewportEl = el.querySelector('.media-viewport');
+  if (viewportEl) {
+    viewportEl.style.transform = 'rotate(' + (item.rotation || 0) + 'deg)';
+    viewportEl.style.transformOrigin = 'center center';
+  }
   if (item.type === 'text') {
     const textDiv = el.querySelector('.text-content');
     if (textDiv) {
@@ -192,6 +197,7 @@ function createOrUpdateMedia(item) {
     el.id = 'm-' + item.id;
 
     const viewport = document.createElement('div');
+    viewport.className = 'media-viewport';
     viewport.style.width = '100%';
     viewport.style.height = '100%';
     viewport.style.overflow = 'hidden';
@@ -297,6 +303,7 @@ function updateMediaPosition(data) {
     if (data.loop !== undefined) cached.loop = data.loop;
     if (data.volume !== undefined) cached.volume = data.volume;
     if (data.opacity !== undefined) cached.opacity = data.opacity;
+    if (data.rotation !== undefined) cached.rotation = data.rotation;
   }
   const el = document.getElementById('m-' + data.id);
   if (el) {
