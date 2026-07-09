@@ -6,149 +6,56 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   * { box-sizing: border-box; }
-  body {
-    font-family: sans-serif;
-    background: #1e1e2e;
-    color: #eee;
-    margin: 0;
-    padding: 16px;
-  }
-  .page {
-    max-width: 960px;
-    margin: 0 auto;
-  }
+  body { font-family: sans-serif; background: #1e1e2e; color: #eee; margin: 0; padding: 16px; }
+  .page { max-width: 960px; margin: 0 auto; }
   h2, h3 { margin: 8px 0; text-align: center; }
-  .toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 12px;
-  }
-  button {
-    background: #5865f2;
-    color: #fff;
-    border: 0;
-    padding: 8px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-  }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; margin-bottom: 10px; }
+  button { background: #5865f2; color: #fff; border: 0; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; }
   button.secondary { background: #444; }
-  input, select {
-    padding: 6px;
-    border-radius: 6px;
-    border: 1px solid #555;
-    background: #2a2a3a;
-    color: #eee;
-  }
-  .media-form {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    justify-content: center;
-    margin-bottom: 12px;
-  }
+  button.tool-btn { background: #333; }
+  button.tool-btn.active { background: #5865f2; }
+  input, select { padding: 6px; border-radius: 6px; border: 1px solid #555; background: #2a2a3a; color: #eee; }
+  .media-form { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 12px; }
+
   #media-list { list-style: none; padding: 0; }
   #media-list li {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #2a2a3a;
-    padding: 6px 10px;
-    margin-bottom: 4px;
-    border-radius: 6px;
+    display: flex; flex-wrap: wrap; gap: 6px; justify-content: space-between; align-items: center;
+    background: #2a2a3a; padding: 6px 10px; margin-bottom: 4px; border-radius: 6px;
+    cursor: grab;
   }
+  #media-list li.dragging { opacity: 0.4; }
+  #media-list li .drag-handle { cursor: grab; color: #888; margin-right: 4px; }
+
+  #folders-panel { background: #26263a; border-radius: 8px; padding: 10px; margin-bottom: 12px; }
+  #folders-list { list-style: none; padding: 0; margin: 8px 0 0 0; }
+  #folders-list li {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #2a2a3a; padding: 6px 10px; margin-bottom: 4px; border-radius: 6px;
+  }
+
   #status { margin-bottom: 12px; font-weight: bold; text-align: center; }
 
-  /* --- Холст по центру --- */
   #canvas-wrap {
-    position: relative;
-    width: 100%;
-    max-width: 960px;
-    aspect-ratio: 16 / 9;
-    margin: 0 auto 12px auto;
-    background-color: #333;
+    position: relative; width: 100%; max-width: 960px; aspect-ratio: 16 / 9;
+    margin: 0 auto 12px auto; background-color: #333;
     background-image:
       linear-gradient(45deg, #444 25%, transparent 25%),
       linear-gradient(-45deg, #444 25%, transparent 25%),
       linear-gradient(45deg, transparent 75%, #444 75%),
       linear-gradient(-45deg, transparent 75%, #444 75%);
-    background-size: 20px 20px;
-    border: 2px solid #555;
-    overflow: hidden;
+    background-size: 20px 20px; border: 2px solid #555; overflow: hidden;
   }
-  #canvas {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%;
-    height: 100%;
-    touch-action: none;
-    cursor: crosshair;
-  }
+  #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
 
-  /* --- Слой перетаскиваемых медиа поверх холста --- */
-  #media-layer {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-  }
-  .media-item {
-    position: absolute;
-    border: 2px dashed #5865f2;
-    pointer-events: auto;
-    cursor: move;
-  }
-  .media-item img,
-  .media-item iframe {
-    width: 100%;
-    height: 100%;
-    display: block;
-    border: 0;
-    pointer-events: none;
-  }
-  .media-item .item-controls {
-    position: absolute;
-    top: -14px;
-    right: -14px;
-    display: flex;
-    gap: 4px;
-  }
-  .media-item .item-btn {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    background: #444;
-    color: #fff;
-    border: 0;
-    font-size: 13px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    padding: 0;
-  }
+  #media-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+  .media-item { position: absolute; border: 2px dashed #5865f2; pointer-events: auto; cursor: move; }
+  .media-item.selected { border: 3px solid #ffcc00; box-shadow: 0 0 0 2px #ffcc0055; }
+  .media-item img, .media-item iframe { width: 100%; height: 100%; display: block; border: 0; pointer-events: none; }
+  .media-item .item-controls { position: absolute; top: -14px; right: -14px; display: flex; gap: 4px; }
+  .media-item .item-btn { width: 26px; height: 26px; border-radius: 50%; background: #444; color: #fff; border: 0; font-size: 13px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
   .media-item .item-btn.remove { background: #e33; }
-  .resize-handle {
-    position: absolute;
-    right: -8px;
-    bottom: -8px;
-    width: 16px;
-    height: 16px;
-    background: #5865f2;
-    border-radius: 3px;
-    cursor: nwse-resize;
-    pointer-events: auto;
-  }
-  .hint {
-    text-align: center;
-    font-size: 13px;
-    color: #999;
-    margin-bottom: 12px;
-  }
+  .resize-handle { position: absolute; right: -8px; bottom: -8px; width: 16px; height: 16px; background: #5865f2; border-radius: 3px; cursor: nwse-resize; pointer-events: auto; }
+  .hint { text-align: center; font-size: 13px; color: #999; margin-bottom: 12px; }
 </style>
 </head>
 <body>
@@ -157,10 +64,18 @@
   <div id="status">Подключение...</div>
 
   <div class="toolbar">
+    <button class="tool-btn active" data-tool="pen">✏️ Кисть</button>
+    <button class="tool-btn" data-tool="eraser">🧹 Ластик</button>
+    <button class="tool-btn" data-tool="rect">⬛ Квадрат</button>
+    <button class="tool-btn" data-tool="circle">⚪ Круг</button>
+    <button class="tool-btn" data-tool="star">⭐ Звезда</button>
+    <button class="tool-btn" data-tool="text">🅰️ Текст</button>
+  </div>
+  <div class="toolbar">
     <label>Цвет: <input type="color" id="color" value="#ff0000"></label>
-    <label>Толщина: <input type="range" id="size" min="1" max="40" value="4"></label>
-    <button id="eraser-btn" class="secondary">Ластик</button>
-    <button id="clear-canvas-btn" class="secondary">Очистить рисунок</button>
+    <label>Толщина / размер текста: <input type="range" id="size" min="1" max="40" value="4"></label>
+    <button id="undo-btn" class="secondary">↩ Отменить (Ctrl+Z)</button>
+    <button id="clear-canvas-btn" class="secondary">Очистить всё</button>
   </div>
 
   <div id="canvas-wrap">
@@ -169,8 +84,14 @@
   </div>
 
   <div class="hint">
-    Медиа-объекты можно таскать мышкой прямо на холсте, тянуть за синий
-    квадратик для изменения размера, кнопкой ⛶ растянуть на весь экран.
+    Фигуры: зажми мышь на холсте, тяни, отпусти. Текст: кликни, где написать.
+    Медиа-объекты можно таскать мышкой, тянуть за синий квадратик — размер,
+    кнопкой ⛶ — на весь экран. Shift+клик — выделить несколько объектов и
+    таскать/удалять их вместе (Delete — удалить выделенное). Alt+перетаскивание
+    по объекту — обрезка/сдвиг картинки внутри рамки, Alt+перетаскивание за
+    уголок — приближение. Двойной клик по объекту сбрасывает обрезку. Ctrl+Z
+    отменяет последнее действие. В списке "Активные медиа" ниже можно тянуть
+    строки мышкой, чтобы менять, что поверх чего отображается (слои).
   </div>
 
   <h3>Добавить медиа</h3>
@@ -191,7 +112,20 @@
     <button id="clear-media-btn" class="secondary">Убрать всё медиа</button>
   </div>
 
-  <h3>Активные медиа</h3>
+  <div id="folders-panel">
+    <h3 style="margin-top:0;">🗂 Папки</h3>
+    <div class="media-form" style="margin-bottom:8px;">
+      <input type="text" id="folder-name-input" placeholder="Название папки" style="flex:1; min-width:160px;">
+      <button id="create-folder-btn">Создать папку</button>
+    </div>
+    <div class="hint" style="margin-bottom:6px;">
+      Кнопка "Выделить" в папке выделяет все объекты внутри — после этого
+      можно перетащить любой из них, и вся папка поедет вместе.
+    </div>
+    <ul id="folders-list"></ul>
+  </div>
+
+  <h3>Активные медиа (слои — верхняя строка отображается поверх остальных)</h3>
   <ul id="media-list"></ul>
 </div>
 
@@ -204,19 +138,21 @@ let authed = false;
 const password = prompt('Введи пароль модератора:');
 socket.on('connect', () => socket.emit('auth', password));
 socket.on('auth-result', (ok) => {
-  if (ok) {
-    authed = true;
-    statusEl.textContent = '✅ Подключено';
-  } else {
-    statusEl.textContent = '❌ Неверный пароль. Обнови страницу и попробуй снова.';
-  }
+  if (ok) { authed = true; statusEl.textContent = '✅ Подключено'; }
+  else { statusEl.textContent = '❌ Неверный пароль. Обнови страницу и попробуй снова.'; }
 });
 
 socket.on('state', (state) => {
   Object.values(state.media).forEach(createOrUpdateMedia);
+  historyList = state.history || [];
+  replayHistory();
+  foldersLocal = state.folders || {};
+  renderFoldersList();
+  refreshFolderSelects();
+  sortMediaList();
 });
 
-// --- Рисование ---
+// --- Холст ---
 const canvasWrap = document.getElementById('canvas-wrap');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
@@ -225,83 +161,267 @@ function resizeCanvas() {
   const rect = canvasWrap.getBoundingClientRect();
   canvas.width = rect.width;
   canvas.height = rect.height;
+  replayHistory();
 }
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
-let drawing = false;
-let lastPos = null;
-let erasing = false;
+// --- Инструменты ---
+let tool = 'pen';
+document.querySelectorAll('.tool-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    tool = btn.dataset.tool;
+    document.querySelectorAll('.tool-btn').forEach((b) => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
 
-document.getElementById('eraser-btn').addEventListener('click', () => {
-  erasing = !erasing;
-  document.getElementById('eraser-btn').textContent = erasing ? 'Ластик (вкл)' : 'Ластик';
+const colorInput = document.getElementById('color');
+const sizeInput = document.getElementById('size');
+
+let historyList = [];
+
+function drawSegment(d) {
+  ctx.globalCompositeOperation = d.erase ? 'destination-out' : 'source-over';
+  ctx.strokeStyle = d.color;
+  ctx.lineWidth = d.size;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(d.x0 * canvas.width, d.y0 * canvas.height);
+  ctx.lineTo(d.x1 * canvas.width, d.y1 * canvas.height);
+  ctx.stroke();
+}
+
+function drawStarPath(cx, cy, outerR, innerR) {
+  const spikes = 5;
+  let rot = (Math.PI / 2) * 3;
+  const step = Math.PI / spikes;
+  ctx.moveTo(cx, cy - outerR);
+  for (let i = 0; i < spikes; i++) {
+    let x = cx + Math.cos(rot) * outerR;
+    let y = cy + Math.sin(rot) * outerR;
+    ctx.lineTo(x, y);
+    rot += step;
+    x = cx + Math.cos(rot) * innerR;
+    y = cy + Math.sin(rot) * innerR;
+    ctx.lineTo(x, y);
+    rot += step;
+  }
+  ctx.lineTo(cx, cy - outerR);
+  ctx.closePath();
+}
+
+function drawShape(obj) {
+  const x0 = obj.x0 * canvas.width, y0 = obj.y0 * canvas.height;
+  const x1 = obj.x1 * canvas.width, y1 = obj.y1 * canvas.height;
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.strokeStyle = obj.color;
+  ctx.lineWidth = obj.size;
+  ctx.beginPath();
+  if (obj.shapeType === 'rect') {
+    ctx.rect(x0, y0, x1 - x0, y1 - y0);
+  } else if (obj.shapeType === 'circle') {
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    const rx = Math.abs(x1 - x0) / 2, ry = Math.abs(y1 - y0) / 2;
+    ctx.ellipse(cx, cy, rx || 1, ry || 1, 0, 0, Math.PI * 2);
+  } else if (obj.shapeType === 'star') {
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    const outerR = Math.min(Math.abs(x1 - x0), Math.abs(y1 - y0)) / 2;
+    drawStarPath(cx, cy, outerR || 1, (outerR || 1) * 0.5);
+  }
+  ctx.stroke();
+}
+
+function drawText(obj) {
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = obj.color;
+  ctx.font = obj.fontSize + 'px sans-serif';
+  ctx.textBaseline = 'top';
+  ctx.fillText(obj.text, obj.x * canvas.width, obj.y * canvas.height);
+}
+
+function replayHistory() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  historyList.forEach((obj) => {
+    if (obj.kind === 'stroke') obj.segments.forEach(drawSegment);
+    else if (obj.kind === 'shape') drawShape(obj);
+    else if (obj.kind === 'text') drawText(obj);
+  });
+}
+
+socket.on('draw', drawSegment);
+socket.on('add-object', (obj) => {
+  historyList.push(obj);
+  if (obj.kind === 'shape') drawShape(obj);
+  else if (obj.kind === 'text') drawText(obj);
+});
+socket.on('redraw-canvas', (data) => {
+  historyList = data.history || [];
+  replayHistory();
+});
+socket.on('clear-canvas', () => {
+  historyList = [];
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 });
 
 document.getElementById('clear-canvas-btn').addEventListener('click', () => {
   socket.emit('clear-canvas');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+});
+document.getElementById('undo-btn').addEventListener('click', () => {
+  if (!authed) return;
+  socket.emit('undo-draw');
+});
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) {
+    e.preventDefault();
+    if (!authed) return;
+    socket.emit('undo-draw');
+  }
 });
 
 function getPos(e) {
   const rect = canvas.getBoundingClientRect();
   const clientX = e.touches ? e.touches[0].clientX : e.clientX;
   const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-  return {
-    x: (clientX - rect.left) / rect.width,
-    y: (clientY - rect.top) / rect.height
-  };
+  return { x: (clientX - rect.left) / rect.width, y: (clientY - rect.top) / rect.height };
 }
 
-function startDraw(e) {
-  if (e.target !== canvas) return; // не рисуем, если тянем медиа-объект
-  drawing = true;
-  lastPos = getPos(e);
-}
-function endDraw() {
-  drawing = false;
-  lastPos = null;
-}
-function moveDraw(e) {
-  if (!drawing || !authed) return;
-  e.preventDefault();
-  const pos = getPos(e);
-  const color = document.getElementById('color').value;
-  const size = parseInt(document.getElementById('size').value, 10);
+let drawing = false;
+let lastPos = null;
+let currentStrokeId = null;
+let shapeDragging = false;
+let shapeStart = null;
 
-  drawLocal(lastPos, pos, color, size, erasing);
+function startAction(e) {
+  if (e.target !== canvas) return;
+  if (!authed) return;
+  clearSelection();
 
-  socket.emit('draw', {
-    x0: lastPos.x, y0: lastPos.y,
-    x1: pos.x, y1: pos.y,
-    color, size, erase: erasing
-  });
-
-  lastPos = pos;
-}
-
-function drawLocal(p0, p1, color, size, erase) {
-  ctx.globalCompositeOperation = erase ? 'destination-out' : 'source-over';
-  ctx.strokeStyle = color;
-  ctx.lineWidth = size;
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(p0.x * canvas.width, p0.y * canvas.height);
-  ctx.lineTo(p1.x * canvas.width, p1.y * canvas.height);
-  ctx.stroke();
+  if (tool === 'pen' || tool === 'eraser') {
+    drawing = true;
+    lastPos = getPos(e);
+    currentStrokeId = 'stroke' + Date.now() + Math.random().toString(36).slice(2);
+  } else if (tool === 'rect' || tool === 'circle' || tool === 'star') {
+    shapeDragging = true;
+    shapeStart = getPos(e);
+  } else if (tool === 'text') {
+    const pos = getPos(e);
+    const text = prompt('Введите текст:');
+    if (text) {
+      const fontSize = Math.max(12, parseInt(sizeInput.value, 10) * 3);
+      const obj = {
+        id: 'obj' + Date.now() + Math.random().toString(36).slice(2),
+        kind: 'text', x: pos.x, y: pos.y, text, color: colorInput.value, fontSize
+      };
+      historyList.push(obj);
+      drawText(obj);
+      socket.emit('add-object', obj);
+    }
+  }
 }
 
-canvasWrap.addEventListener('mousedown', startDraw);
-window.addEventListener('mouseup', endDraw);
-canvasWrap.addEventListener('mousemove', moveDraw);
-canvasWrap.addEventListener('touchstart', startDraw);
-window.addEventListener('touchend', endDraw);
-canvasWrap.addEventListener('touchmove', moveDraw);
+function endAction() {
+  if (drawing) { drawing = false; lastPos = null; }
+  if (shapeDragging) { shapeDragging = false; }
+}
 
-// --- Медиа: список + превью на холсте с перетаскиванием ---
+function moveAction(e) {
+  if (!authed) return;
+  if (drawing && (tool === 'pen' || tool === 'eraser')) {
+    e.preventDefault();
+    const pos = getPos(e);
+    const color = colorInput.value;
+    const size = parseInt(sizeInput.value, 10);
+    const erase = tool === 'eraser';
+    drawSegment({ x0: lastPos.x, y0: lastPos.y, x1: pos.x, y1: pos.y, color, size, erase });
+    socket.emit('draw', { x0: lastPos.x, y0: lastPos.y, x1: pos.x, y1: pos.y, color, size, erase, strokeId: currentStrokeId });
+    lastPos = pos;
+  } else if (shapeDragging) {
+    e.preventDefault();
+    const pos = getPos(e);
+    replayHistory();
+    drawShape({ shapeType: tool, x0: shapeStart.x, y0: shapeStart.y, x1: pos.x, y1: pos.y, color: colorInput.value, size: parseInt(sizeInput.value, 10) });
+    lastPos = pos;
+  }
+}
+
+function finalizeShapeIfNeeded() {
+  if (shapeStart && lastPos && (tool === 'rect' || tool === 'circle' || tool === 'star') && !drawing) {
+    const obj = {
+      id: 'obj' + Date.now() + Math.random().toString(36).slice(2),
+      kind: 'shape', shapeType: tool,
+      x0: shapeStart.x, y0: shapeStart.y, x1: lastPos.x, y1: lastPos.y,
+      color: colorInput.value, size: parseInt(sizeInput.value, 10)
+    };
+    historyList.push(obj);
+    socket.emit('add-object', obj);
+  }
+  shapeStart = null;
+}
+
+canvasWrap.addEventListener('mousedown', startAction);
+window.addEventListener('mouseup', () => {
+  const wasShape = shapeDragging;
+  endAction();
+  if (wasShape) finalizeShapeIfNeeded();
+});
+canvasWrap.addEventListener('mousemove', moveAction);
+canvasWrap.addEventListener('touchstart', startAction);
+window.addEventListener('touchend', () => {
+  const wasShape = shapeDragging;
+  endAction();
+  if (wasShape) finalizeShapeIfNeeded();
+});
+canvasWrap.addEventListener('touchmove', moveAction);
+
+function clamp(v, min, max) { return Math.min(Math.max(v, min), max); }
+
+// --- Медиа ---
 const mediaListEl = document.getElementById('media-list');
 const mediaLayer = document.getElementById('media-layer');
 const mediaItemsLocal = {};
+const selectedIds = new Set();
+let foldersLocal = {};
+
+function clearSelection() {
+  selectedIds.forEach((id) => {
+    const el = document.getElementById('cm-' + id);
+    if (el) el.classList.remove('selected');
+  });
+  selectedIds.clear();
+}
+function toggleSelect(id) {
+  const el = document.getElementById('cm-' + id);
+  if (selectedIds.has(id)) { selectedIds.delete(id); if (el) el.classList.remove('selected'); }
+  else { selectedIds.add(id); if (el) el.classList.add('selected'); }
+}
+function selectOnly(id) {
+  clearSelection();
+  selectedIds.add(id);
+  const el = document.getElementById('cm-' + id);
+  if (el) el.classList.add('selected');
+}
+function selectMany(ids) {
+  clearSelection();
+  ids.forEach((id) => {
+    if (!mediaItemsLocal[id]) return;
+    selectedIds.add(id);
+    const el = document.getElementById('cm-' + id);
+    if (el) el.classList.add('selected');
+  });
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+  const tag = document.activeElement && document.activeElement.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+  if (selectedIds.size === 0) return;
+  e.preventDefault();
+  Array.from(selectedIds).forEach((id) => {
+    socket.emit('remove-media', id);
+    removeMediaLocal(id);
+  });
+});
 
 function extractYoutubeId(url) {
   const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/);
@@ -309,11 +429,33 @@ function extractYoutubeId(url) {
 }
 
 function sendUpdate(item) {
-  socket.emit('update-media', { id: item.id, x: item.x, y: item.y, w: item.w, h: item.h });
+  socket.emit('update-media', {
+    id: item.id, x: item.x, y: item.y, w: item.w, h: item.h,
+    zoom: item.zoom || 1, offsetX: item.offsetX || 0, offsetY: item.offsetY || 0
+  });
 }
 
-// Создаёт (если нет) или обновляет DOM-превью объекта на холсте модератора
+function applyCropTransform(el, item) {
+  const inner = el.querySelector('.crop-inner');
+  if (!inner) return;
+  const zoom = item.zoom || 1;
+  const ox = item.offsetX || 0;
+  const oy = item.offsetY || 0;
+  inner.style.transform = 'scale(' + zoom + ') translate(' + (ox * 100) + '%, ' + (oy * 100) + '%)';
+}
+
+function applyPosition(el, item) {
+  el.style.left = (item.x * 100) + '%';
+  el.style.top = (item.y * 100) + '%';
+  el.style.width = (item.w * 100) + '%';
+  el.style.height = (item.h * 100) + '%';
+}
+
 function createOrUpdateMedia(item) {
+  if (item.zoom === undefined) item.zoom = 1;
+  if (item.offsetX === undefined) item.offsetX = 0;
+  if (item.offsetY === undefined) item.offsetY = 0;
+  if (item.z === undefined) item.z = 0;
   mediaItemsLocal[item.id] = item;
 
   let el = document.getElementById('cm-' + item.id);
@@ -322,9 +464,15 @@ function createOrUpdateMedia(item) {
     el.className = 'media-item';
     el.id = 'cm-' + item.id;
 
+    const viewport = document.createElement('div');
+    viewport.style.width = '100%'; viewport.style.height = '100%';
+    viewport.style.overflow = 'hidden'; viewport.style.position = 'relative';
+
     const inner = document.createElement('div');
-    inner.style.width = '100%';
-    inner.style.height = '100%';
+    inner.className = 'crop-inner';
+    inner.style.width = '100%'; inner.style.height = '100%';
+    inner.style.transformOrigin = 'center center';
+
     if (item.type === 'image') {
       inner.innerHTML = '<img src="' + item.url + '">';
     } else if (item.type === 'youtube') {
@@ -332,15 +480,14 @@ function createOrUpdateMedia(item) {
     } else if (item.type === 'ninja') {
       inner.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#0008;color:#fff;font-size:12px;text-align:center;">OBS Ninja</div>';
     }
-    el.appendChild(inner);
+    viewport.appendChild(inner);
+    el.appendChild(viewport);
 
     const controls = document.createElement('div');
     controls.className = 'item-controls';
 
     const fullBtn = document.createElement('button');
-    fullBtn.className = 'item-btn';
-    fullBtn.title = 'На весь экран';
-    fullBtn.textContent = '⛶';
+    fullBtn.className = 'item-btn'; fullBtn.title = 'На весь экран'; fullBtn.textContent = '⛶';
     fullBtn.onclick = (ev) => {
       ev.stopPropagation();
       item.x = 0; item.y = 0; item.w = 1; item.h = 1;
@@ -349,9 +496,7 @@ function createOrUpdateMedia(item) {
     };
 
     const removeBtn = document.createElement('button');
-    removeBtn.className = 'item-btn remove';
-    removeBtn.title = 'Удалить';
-    removeBtn.textContent = '✕';
+    removeBtn.className = 'item-btn remove'; removeBtn.title = 'Удалить'; removeBtn.textContent = '✕';
     removeBtn.onclick = (ev) => {
       ev.stopPropagation();
       socket.emit('remove-media', item.id);
@@ -369,44 +514,76 @@ function createOrUpdateMedia(item) {
     makeDraggable(el, item);
     makeResizable(handle, el, item);
 
+    el.addEventListener('dblclick', (e) => {
+      if (e.target.closest('.resize-handle') || e.target.closest('.item-btn')) return;
+      item.zoom = 1; item.offsetX = 0; item.offsetY = 0;
+      applyCropTransform(el, item);
+      sendUpdate(item);
+    });
+
     mediaLayer.appendChild(el);
     addMediaToList(item);
   }
   applyPosition(el, item);
-}
-
-function applyPosition(el, item) {
-  el.style.left = (item.x * 100) + '%';
-  el.style.top = (item.y * 100) + '%';
-  el.style.width = (item.w * 100) + '%';
-  el.style.height = (item.h * 100) + '%';
+  applyCropTransform(el, item);
+  el.style.zIndex = item.z || 0;
 }
 
 function makeDraggable(el, item) {
-  let dragging = false;
-  let startX, startY, startItemX, startItemY;
-
   el.addEventListener('mousedown', (e) => {
     if (e.target.closest('.resize-handle') || e.target.closest('.item-btn')) return;
     e.stopPropagation();
-    dragging = true;
+
+    if (e.altKey) {
+      const cropRect = el.getBoundingClientRect();
+      const cropStartX = e.clientX, cropStartY = e.clientY;
+      const startOffsetX = item.offsetX || 0;
+      const startOffsetY = item.offsetY || 0;
+      function onCropMove(ev) {
+        const dx = (ev.clientX - cropStartX) / cropRect.width;
+        const dy = (ev.clientY - cropStartY) / cropRect.height;
+        item.offsetX = clamp(startOffsetX + dx, -1, 1);
+        item.offsetY = clamp(startOffsetY + dy, -1, 1);
+        applyCropTransform(el, item);
+        sendUpdate(item);
+      }
+      function onCropUp() {
+        window.removeEventListener('mousemove', onCropMove);
+        window.removeEventListener('mouseup', onCropUp);
+      }
+      window.addEventListener('mousemove', onCropMove);
+      window.addEventListener('mouseup', onCropUp);
+      return;
+    }
+
+    if (e.shiftKey) { toggleSelect(item.id); return; }
+    if (!selectedIds.has(item.id)) { selectOnly(item.id); }
+
     const rect = canvasWrap.getBoundingClientRect();
-    startX = e.clientX;
-    startY = e.clientY;
-    startItemX = item.x;
-    startItemY = item.y;
+    const startX = e.clientX, startY = e.clientY;
+    const startPositions = {};
+    selectedIds.forEach((id) => {
+      const it = mediaItemsLocal[id];
+      if (it) startPositions[id] = { x: it.x, y: it.y };
+    });
 
     function onMove(ev) {
-      if (!dragging) return;
       const dx = (ev.clientX - startX) / rect.width;
       const dy = (ev.clientY - startY) / rect.height;
-      item.x = Math.min(Math.max(startItemX + dx, -item.w + 0.02), 1 - 0.02);
-      item.y = Math.min(Math.max(startItemY + dy, -item.h + 0.02), 1 - 0.02);
-      applyPosition(el, item);
-      sendUpdate(item);
+      const batch = [];
+      selectedIds.forEach((id) => {
+        const it = mediaItemsLocal[id];
+        const start = startPositions[id];
+        if (!it || !start) return;
+        it.x = Math.min(Math.max(start.x + dx, -it.w + 0.02), 1 - 0.02);
+        it.y = Math.min(Math.max(start.y + dy, -it.h + 0.02), 1 - 0.02);
+        const itEl = document.getElementById('cm-' + id);
+        if (itEl) applyPosition(itEl, it);
+        batch.push({ id: it.id, x: it.x, y: it.y, w: it.w, h: it.h });
+      });
+      if (batch.length) socket.emit('update-media-batch', batch);
     }
     function onUp() {
-      dragging = false;
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     }
@@ -418,12 +595,27 @@ function makeDraggable(el, item) {
 function makeResizable(handle, el, item) {
   handle.addEventListener('mousedown', (e) => {
     e.stopPropagation();
-    const rect = canvasWrap.getBoundingClientRect();
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const startW = item.w;
-    const startH = item.h;
+    if (e.altKey) {
+      const zoomStartY = e.clientY;
+      const startZoom = item.zoom || 1;
+      function onZoomMove(ev) {
+        const dy = zoomStartY - ev.clientY;
+        item.zoom = clamp(startZoom + dy / 150, 1, 5);
+        applyCropTransform(el, item);
+        sendUpdate(item);
+      }
+      function onZoomUp() {
+        window.removeEventListener('mousemove', onZoomMove);
+        window.removeEventListener('mouseup', onZoomUp);
+      }
+      window.addEventListener('mousemove', onZoomMove);
+      window.addEventListener('mouseup', onZoomUp);
+      return;
+    }
 
+    const rect = canvasWrap.getBoundingClientRect();
+    const startX = e.clientX, startY = e.clientY;
+    const startW = item.w, startH = item.h;
     function onMove(ev) {
       const dx = (ev.clientX - startX) / rect.width;
       const dy = (ev.clientY - startY) / rect.height;
@@ -447,62 +639,94 @@ function removeMediaLocal(id) {
   const li = document.getElementById('li-' + id);
   if (li) li.remove();
   delete mediaItemsLocal[id];
+  selectedIds.delete(id);
 }
 
-socket.on('add-media', createOrUpdateMedia);
+socket.on('add-media', (item) => { createOrUpdateMedia(item); sortMediaList(); });
+socket.on('set-z', ({ id, z }) => {
+  const it = mediaItemsLocal[id];
+  if (!it) return;
+  it.z = z;
+  const el = document.getElementById('cm-' + id);
+  if (el) el.style.zIndex = z;
+  sortMediaList();
+});
 socket.on('update-media', (data) => {
   const item = mediaItemsLocal[data.id];
   if (!item) return;
   item.x = data.x; item.y = data.y; item.w = data.w; item.h = data.h;
+  if (data.zoom !== undefined) item.zoom = data.zoom;
+  if (data.offsetX !== undefined) item.offsetX = data.offsetX;
+  if (data.offsetY !== undefined) item.offsetY = data.offsetY;
   const el = document.getElementById('cm-' + data.id);
-  if (el) applyPosition(el, item);
+  if (el) { applyPosition(el, item); applyCropTransform(el, item); }
+});
+socket.on('update-media-batch', (updates) => {
+  updates.forEach((data) => {
+    const item = mediaItemsLocal[data.id];
+    if (!item) return;
+    item.x = data.x; item.y = data.y; item.w = data.w; item.h = data.h;
+    const el = document.getElementById('cm-' + data.id);
+    if (el) applyPosition(el, item);
+  });
+});
+socket.on('reorder-media', (idsInOrder) => {
+  idsInOrder.forEach((id, idx) => {
+    const z = idsInOrder.length - idx;
+    const it = mediaItemsLocal[id];
+    if (it) it.z = z;
+    const el = document.getElementById('cm-' + id);
+    if (el) el.style.zIndex = z;
+  });
+  sortMediaList();
 });
 socket.on('remove-media', removeMediaLocal);
 socket.on('clear-media', () => {
   mediaLayer.innerHTML = '';
   mediaListEl.innerHTML = '';
   for (const k in mediaItemsLocal) delete mediaItemsLocal[k];
+  selectedIds.clear();
+});
+socket.on('folders-sync', (f) => {
+  foldersLocal = f || {};
+  renderFoldersList();
+  refreshFolderSelects();
 });
 
-// --- Добавление по ссылке ---
 document.getElementById('add-media-btn').addEventListener('click', () => {
   if (!authed) return alert('Сначала дождись подключения (правильный пароль)');
   const type = document.getElementById('media-type').value;
   const url = document.getElementById('media-url').value.trim();
   if (!url) return;
-
   const id = 'id' + Date.now();
-  const item = { id, type, url, x: 0.3, y: 0.3, w: 0.4, h: 0.4 };
-
+  const item = { id, type, url, x: 0.3, y: 0.3, w: 0.4, h: 0.4, z: 9999 };
   if (type === 'youtube') {
     const vid = extractYoutubeId(url);
     if (!vid) return alert('Не получилось распознать ссылку на YouTube');
     item.videoId = vid;
   }
-
   socket.emit('add-media', item);
   createOrUpdateMedia(item);
+  sortMediaList();
   document.getElementById('media-url').value = '';
 });
 
-// --- Загрузка файла с компьютера ---
 document.getElementById('media-file').addEventListener('change', (e) => {
   if (!authed) return alert('Сначала дождись подключения (правильный пароль)');
   const file = e.target.files[0];
   if (!file) return;
-
   if (file.size > 12 * 1024 * 1024) {
     alert('Файл слишком большой (максимум ~12 МБ). Возьми файл поменьше.');
     e.target.value = '';
     return;
   }
-
   const reader = new FileReader();
   reader.onload = () => {
     const id = 'id' + Date.now();
-    const item = { id, type: 'image', url: reader.result, x: 0.3, y: 0.3, w: 0.4, h: 0.4 };
+    const item = { id, type: 'image', url: reader.result, x: 0.3, y: 0.3, w: 0.4, h: 0.4, z: 9999 };
     socket.emit('add-media', item);
     createOrUpdateMedia(item);
+    sortMediaList();
     e.target.value = '';
   };
   reader.readAsDataURL(file);
@@ -513,14 +737,111 @@ document.getElementById('clear-media-btn').addEventListener('click', () => {
   mediaLayer.innerHTML = '';
   mediaListEl.innerHTML = '';
   for (const k in mediaItemsLocal) delete mediaItemsLocal[k];
+  selectedIds.clear();
+});
+
+// --- Список "Активные медиа" — можно тянуть строки мышкой (порядок слоёв) ---
+function sortMediaList() {
+  const lis = Array.from(mediaListEl.children);
+  lis.sort((a, b) => {
+    const za = (mediaItemsLocal[a.dataset.id] || {}).z || 0;
+    const zb = (mediaItemsLocal[b.dataset.id] || {}).z || 0;
+    return zb - za;
+  });
+  lis.forEach((li) => mediaListEl.appendChild(li));
+}
+
+function getDragAfterElement(container, y) {
+  const els = [...container.querySelectorAll('li:not(.dragging)')];
+  return els.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    if (offset < 0 && offset > closest.offset) {
+      return { offset, element: child };
+    }
+    return closest;
+  }, { offset: -Infinity, element: null }).element;
+}
+
+mediaListEl.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  const dragging = mediaListEl.querySelector('.dragging');
+  if (!dragging) return;
+  const afterEl = getDragAfterElement(mediaListEl, e.clientY);
+  if (afterEl == null) mediaListEl.appendChild(dragging);
+  else mediaListEl.insertBefore(dragging, afterEl);
+});
+
+mediaListEl.addEventListener('dragend', () => {
+  const order = Array.from(mediaListEl.children).map((li) => li.dataset.id);
+  order.forEach((id, idx) => {
+    const it = mediaItemsLocal[id];
+    if (it) {
+      it.z = order.length - idx;
+      const el = document.getElementById('cm-' + id);
+      if (el) el.style.zIndex = it.z;
+    }
+  });
+  socket.emit('reorder-media', order);
 });
 
 function addMediaToList(item) {
   const li = document.createElement('li');
   li.id = 'li-' + item.id;
+  li.dataset.id = item.id;
+  li.draggable = true;
+
+  li.addEventListener('dragstart', () => { li.classList.add('dragging'); });
+  li.addEventListener('dragend', () => { li.classList.remove('dragging'); });
+
+  const dragHandle = document.createElement('span');
+  dragHandle.className = 'drag-handle';
+  dragHandle.textContent = '⠿';
+  li.appendChild(dragHandle);
+
   const label = item.type === 'image' ? 'Картинка' : item.type === 'youtube' ? 'YouTube' : 'OBS Ninja';
-  const shortUrl = item.url.startsWith('data:') ? '(загружено с компьютера)' : item.url.slice(0, 40);
-  li.innerHTML = '<span>' + label + ': ' + shortUrl + '</span>';
+  const shortUrl = item.url.startsWith('data:') ? '(загружено с компьютера)' : item.url.slice(0, 30);
+  const labelSpan = document.createElement('span');
+  labelSpan.textContent = label + ': ' + shortUrl;
+  labelSpan.style.flex = '1';
+  li.appendChild(labelSpan);
+
+  // Выбор папки для объекта
+  const folderSelect = document.createElement('select');
+  folderSelect.className = 'folder-select';
+  folderSelect.dataset.itemId = item.id;
+  folderSelect.addEventListener('change', () => {
+    socket.emit('assign-folder', { itemId: item.id, folderId: folderSelect.value || null });
+  });
+  li.appendChild(folderSelect);
+
+  if (item.type === 'youtube') {
+    const ytControls = document.createElement('div');
+    ytControls.style.display = 'flex'; ytControls.style.gap = '6px'; ytControls.style.alignItems = 'center';
+
+    const playBtn = document.createElement('button');
+    playBtn.textContent = '▶'; playBtn.className = 'secondary'; playBtn.title = 'Запустить';
+    playBtn.onclick = () => socket.emit('youtube-control', { id: item.id, action: 'play' });
+
+    const pauseBtn = document.createElement('button');
+    pauseBtn.textContent = '⏸'; pauseBtn.className = 'secondary'; pauseBtn.title = 'Пауза';
+    pauseBtn.onclick = () => socket.emit('youtube-control', { id: item.id, action: 'pause' });
+
+    const volLabel = document.createElement('span');
+    volLabel.textContent = '🔊'; volLabel.style.fontSize = '12px';
+
+    const volInput = document.createElement('input');
+    volInput.type = 'range'; volInput.min = 0; volInput.max = 100; volInput.value = 100;
+    volInput.style.width = '80px';
+    volInput.oninput = () => socket.emit('youtube-control', { id: item.id, action: 'volume', value: parseInt(volInput.value, 10) });
+
+    ytControls.appendChild(playBtn);
+    ytControls.appendChild(pauseBtn);
+    ytControls.appendChild(volLabel);
+    ytControls.appendChild(volInput);
+    li.appendChild(ytControls);
+  }
+
   const btn = document.createElement('button');
   btn.textContent = 'Убрать';
   btn.className = 'secondary';
@@ -530,6 +851,68 @@ function addMediaToList(item) {
   };
   li.appendChild(btn);
   mediaListEl.appendChild(li);
+  refreshFolderSelects();
+}
+
+// --- Папки ---
+document.getElementById('create-folder-btn').addEventListener('click', () => {
+  if (!authed) return alert('Сначала дождись подключения (правильный пароль)');
+  const input = document.getElementById('folder-name-input');
+  const name = input.value.trim();
+  if (!name) return;
+  socket.emit('create-folder', name);
+  input.value = '';
+});
+
+function findFolderOfItem(itemId) {
+  for (const f of Object.values(foldersLocal)) {
+    if (f.memberIds.includes(itemId)) return f.id;
+  }
+  return '';
+}
+
+function refreshFolderSelects() {
+  document.querySelectorAll('.folder-select').forEach((select) => {
+    const itemId = select.dataset.itemId;
+    const current = findFolderOfItem(itemId);
+    select.innerHTML = '<option value="">Без папки</option>';
+    Object.values(foldersLocal).forEach((f) => {
+      const opt = document.createElement('option');
+      opt.value = f.id;
+      opt.textContent = f.name;
+      if (f.id === current) opt.selected = true;
+      select.appendChild(opt);
+    });
+  });
+}
+
+function renderFoldersList() {
+  const foldersListEl = document.getElementById('folders-list');
+  foldersListEl.innerHTML = '';
+  Object.values(foldersLocal).forEach((f) => {
+    const li = document.createElement('li');
+
+    const label = document.createElement('span');
+    label.textContent = '🗂 ' + f.name + ' (' + f.memberIds.length + ')';
+
+    const btns = document.createElement('div');
+    btns.style.display = 'flex'; btns.style.gap = '6px';
+
+    const selectBtn = document.createElement('button');
+    selectBtn.textContent = 'Выделить';
+    selectBtn.onclick = () => selectMany(f.memberIds);
+
+    const delBtn = document.createElement('button');
+    delBtn.textContent = 'Удалить папку';
+    delBtn.className = 'secondary';
+    delBtn.onclick = () => socket.emit('delete-folder', f.id);
+
+    btns.appendChild(selectBtn);
+    btns.appendChild(delBtn);
+    li.appendChild(label);
+    li.appendChild(btns);
+    foldersListEl.appendChild(li);
+  });
 }
 </script>
 </body>

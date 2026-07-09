@@ -5,37 +5,13 @@
 <title>Overlay</title>
 <style>
   html, body {
-    margin: 0;
-    padding: 0;
-    background: transparent;
-    overflow: hidden;
-    width: 100%;
-    height: 100%;
+    margin: 0; padding: 0; background: transparent;
+    overflow: hidden; width: 100%; height: 100%;
   }
-  #canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-  }
-  #media-layer {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-  }
-  .media-item {
-    position: absolute;
-  }
-  .media-item img,
-  .media-item iframe {
-    width: 100%;
-    height: 100%;
-    border: 0;
-    display: block;
-  }
+  #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+  #media-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+  .media-item { position: absolute; }
+  .media-item img, .media-item iframe { width: 100%; height: 100%; border: 0; display: block; }
 </style>
 </head>
 <body>
@@ -55,20 +31,19 @@ resize();
 window.addEventListener('resize', resize);
 
 const socket = io();
-
-// Локальный кэш полных данных объектов (чтобы не пересылать картинку
-// заново при каждом перемещении)
 const mediaCache = {};
+let historyList = [];
 
-socket.on('connect', () => {
-  socket.emit('overlay-join');
-});
+socket.on('connect', () => socket.emit('overlay-join'));
 
 socket.on('state', (state) => {
   Object.values(state.media).forEach(createOrUpdateMedia);
+  historyList = state.history || [];
+  replayHistory();
 });
 
-socket.on('draw', (d) => {
+// --- Рисование: мазки, фигуры, текст ---
+function drawSegment(d) {
   ctx.globalCompositeOperation = d.erase ? 'destination-out' : 'source-over';
   ctx.strokeStyle = d.color;
   ctx.lineWidth = d.size;
@@ -77,12 +52,84 @@ socket.on('draw', (d) => {
   ctx.moveTo(d.x0 * canvas.width, d.y0 * canvas.height);
   ctx.lineTo(d.x1 * canvas.width, d.y1 * canvas.height);
   ctx.stroke();
+}
+
+function drawStarPath(cx, cy, outerR, innerR) {
+  const spikes = 5;
+  let rot = (Math.PI / 2) * 3;
+  const step = Math.PI / spikes;
+  ctx.moveTo(cx, cy - outerR);
+  for (let i = 0; i < spikes; i++) {
+    let x = cx + Math.cos(rot) * outerR;
+    let y = cy + Math.sin(rot) * outerR;
+    ctx.lineTo(x, y);
+    rot += step;
+    x = cx + Math.cos(rot) * innerR;
+    y = cy + Math.sin(rot) * innerR;
+    ctx.lineTo(x, y);
+    rot += step;
+  }
+  ctx.lineTo(cx, cy - outerR);
+  ctx.closePath();
+}
+
+function drawShape(obj) {
+  const x0 = obj.x0 * canvas.width, y0 = obj.y0 * canvas.height;
+  const x1 = obj.x1 * canvas.width, y1 = obj.y1 * canvas.height;
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.strokeStyle = obj.color;
+  ctx.lineWidth = obj.size;
+  ctx.beginPath();
+  if (obj.shapeType === 'rect') {
+    ctx.rect(x0, y0, x1 - x0, y1 - y0);
+  } else if (obj.shapeType === 'circle') {
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    const rx = Math.abs(x1 - x0) / 2, ry = Math.abs(y1 - y0) / 2;
+    ctx.ellipse(cx, cy, rx || 1, ry || 1, 0, 0, Math.PI * 2);
+  } else if (obj.shapeType === 'star') {
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    const outerR = Math.min(Math.abs(x1 - x0), Math.abs(y1 - y0)) / 2;
+    drawStarPath(cx, cy, outerR || 1, (outerR || 1) * 0.5);
+  }
+  ctx.stroke();
+}
+
+function drawText(obj) {
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = obj.color;
+  ctx.font = obj.fontSize + 'px sans-serif';
+  ctx.textBaseline = 'top';
+  ctx.fillText(obj.text, obj.x * canvas.width, obj.y * canvas.height);
+}
+
+function replayHistory() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  historyList.forEach((obj) => {
+    if (obj.kind === 'stroke') obj.segments.forEach(drawSegment);
+    else if (obj.kind === 'shape') drawShape(obj);
+    else if (obj.kind === 'text') drawText(obj);
+  });
+}
+
+socket.on('draw', drawSegment);
+
+socket.on('add-object', (obj) => {
+  historyList.push(obj);
+  if (obj.kind === 'shape') drawShape(obj);
+  else if (obj.kind === 'text') drawText(obj);
+});
+
+socket.on('redraw-canvas', (data) => {
+  historyList = data.history || [];
+  replayHistory();
 });
 
 socket.on('clear-canvas', () => {
+  historyList = [];
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 });
 
+// --- Медиа ---
 const mediaLayer = document.getElementById('media-layer');
 
 function applyPosition(el, item) {
@@ -92,6 +139,15 @@ function applyPosition(el, item) {
   el.style.height = (item.h * 100) + '%';
 }
 
+function applyCropTransform(el, item) {
+  const inner = el.querySelector('.crop-inner');
+  if (!inner) return;
+  const zoom = item.zoom || 1;
+  const ox = item.offsetX || 0;
+  const oy = item.offsetY || 0;
+  inner.style.transform = 'scale(' + zoom + ') translate(' + (ox * 100) + '%, ' + (oy * 100) + '%)';
+}
+
 function createOrUpdateMedia(item) {
   mediaCache[item.id] = item;
   let el = document.getElementById('m-' + item.id);
@@ -99,21 +155,39 @@ function createOrUpdateMedia(item) {
     el = document.createElement('div');
     el.className = 'media-item';
     el.id = 'm-' + item.id;
-    mediaLayer.appendChild(el);
+
+    const viewport = document.createElement('div');
+    viewport.style.width = '100%';
+    viewport.style.height = '100%';
+    viewport.style.overflow = 'hidden';
+    viewport.style.position = 'relative';
+
+    const inner = document.createElement('div');
+    inner.className = 'crop-inner';
+    inner.style.width = '100%';
+    inner.style.height = '100%';
+    inner.style.transformOrigin = 'center center';
 
     if (item.type === 'image') {
-      el.innerHTML = '<img src="' + item.url + '">';
+      inner.innerHTML = '<img src="' + item.url + '">';
     } else if (item.type === 'youtube') {
-      el.innerHTML = '<iframe src="https://www.youtube.com/embed/' + item.videoId +
-        '?autoplay=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>';
+      const origin = encodeURIComponent(location.origin);
+      inner.innerHTML = '<iframe id="yt-' + item.id + '" src="https://www.youtube.com/embed/' +
+        item.videoId + '?autoplay=1&enablejsapi=1&origin=' + origin +
+        '" allow="autoplay; encrypted-media" allowfullscreen></iframe>';
     } else if (item.type === 'ninja') {
-      el.innerHTML = '<iframe src="' + item.url + '" allow="camera; microphone; autoplay"></iframe>';
+      inner.innerHTML = '<iframe src="' + item.url + '" allow="camera; microphone; autoplay"></iframe>';
     }
+
+    viewport.appendChild(inner);
+    el.appendChild(viewport);
+    mediaLayer.appendChild(el);
   }
   applyPosition(el, item);
+  applyCropTransform(el, item);
+  el.style.zIndex = item.z || 0;
 }
 
-// Быстрое обновление позиции/размера без перерисовки содержимого
 function updateMediaPosition(data) {
   const cached = mediaCache[data.id];
   if (cached) {
@@ -121,13 +195,31 @@ function updateMediaPosition(data) {
     cached.y = data.y;
     cached.w = data.w;
     cached.h = data.h;
+    if (data.zoom !== undefined) cached.zoom = data.zoom;
+    if (data.offsetX !== undefined) cached.offsetX = data.offsetX;
+    if (data.offsetY !== undefined) cached.offsetY = data.offsetY;
   }
   const el = document.getElementById('m-' + data.id);
-  if (el) applyPosition(el, data);
+  if (el) {
+    applyPosition(el, data);
+    applyCropTransform(el, cached || data);
+  }
 }
 
 socket.on('add-media', createOrUpdateMedia);
 socket.on('update-media', updateMediaPosition);
+socket.on('update-media-batch', (updates) => {
+  updates.forEach(updateMediaPosition);
+});
+socket.on('reorder-media', (idsInOrder) => {
+  idsInOrder.forEach((id, idx) => {
+    const z = idsInOrder.length - idx;
+    const cached = mediaCache[id];
+    if (cached) cached.z = z;
+    const el = document.getElementById('m-' + id);
+    if (el) el.style.zIndex = z;
+  });
+});
 
 socket.on('remove-media', (id) => {
   const el = document.getElementById('m-' + id);
@@ -138,6 +230,19 @@ socket.on('remove-media', (id) => {
 socket.on('clear-media', () => {
   mediaLayer.innerHTML = '';
   for (const k in mediaCache) delete mediaCache[k];
+});
+
+// --- Управление YouTube ---
+socket.on('youtube-control', (data) => {
+  const iframe = document.getElementById('yt-' + data.id);
+  if (!iframe || !iframe.contentWindow) return;
+  let func = null, args = [];
+  if (data.action === 'play') func = 'playVideo';
+  else if (data.action === 'pause') func = 'pauseVideo';
+  else if (data.action === 'volume') { func = 'setVolume'; args = [data.value]; }
+  else if (data.action === 'mute') func = 'mute';
+  else if (data.action === 'unmute') func = 'unMute';
+  if (func) iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func, args }), '*');
 });
 </script>
 </body>
