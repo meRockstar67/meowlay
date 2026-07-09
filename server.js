@@ -10,7 +10,7 @@ const app = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  maxHttpBufferSize: 15 * 1024 * 1024
+  maxHttpBufferSize: 25 * 1024 * 1024
 });
 
 const PASSWORD = process.env.MOD_PASSWORD || 'meowh0cki2026';
@@ -144,6 +144,9 @@ io.on('connection', (socket) => {
     if (data.fontSize !== undefined) item.fontSize = data.fontSize;
     if (data.fontScale !== undefined) item.fontScale = data.fontScale;
     if (data.color !== undefined) item.color = data.color;
+    if (data.hidden !== undefined) item.hidden = data.hidden;
+    if (data.loop !== undefined) item.loop = data.loop;
+    if (data.volume !== undefined) item.volume = data.volume;
     socket.broadcast.emit('update-media', data);
     saveStateDebounced();
   });
@@ -194,6 +197,12 @@ io.on('connection', (socket) => {
   socket.on('youtube-control', (data) => {
     if (!authed) return;
     socket.broadcast.emit('youtube-control', data);
+  });
+
+  // Play/пауза для загруженных видеофайлов (не YouTube)
+  socket.on('video-control', (data) => {
+    if (!authed) return;
+    socket.broadcast.emit('video-control', data);
   });
 
   // --- Папки ---
