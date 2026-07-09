@@ -168,8 +168,12 @@ function applyHiddenState(el, item) {
   if (item.type === 'video') {
     const v = document.getElementById('vid-' + item.id);
     if (v) {
-      if (item.hidden) v.pause();
-      else v.play().catch(() => {});
+      if (item.hidden) {
+        v.pause();
+      } else {
+        v.currentTime = 0;
+        v.play().catch(() => {});
+      }
     }
   } else if (item.type === 'youtube') {
     const iframe = document.getElementById('yt-' + item.id);

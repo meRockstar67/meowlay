@@ -630,7 +630,16 @@ function createOrUpdateMedia(item) {
       item.hidden = !item.hidden;
       hideBtn.textContent = item.hidden ? '🙈' : '👁';
       applyPosition(el, item);
+      if (item.type === 'video') {
+        const localVid = document.getElementById('vid-' + item.id);
+        if (localVid) {
+          if (item.hidden) { localVid.pause(); }
+          else { localVid.currentTime = 0; localVid.play().catch(() => {}); }
+        }
+      }
       sendUpdate(item);
+      const listHideBtn = document.getElementById('hidebtn-' + item.id);
+      if (listHideBtn) listHideBtn.textContent = item.hidden ? '👁 Показать' : '🙈 Скрыть';
     };
 
     const removeBtn = document.createElement('button');
@@ -834,6 +843,8 @@ socket.on('update-media', (data) => {
     if (opacityVal && data.opacity !== undefined) opacityVal.textContent = data.opacity + '%';
     const hideBtnEl = el.querySelector('.item-btn:nth-child(3)');
     if (hideBtnEl) hideBtnEl.textContent = item.hidden ? '🙈' : '👁';
+    const listHideShowBtn = document.getElementById('hidebtn-' + data.id);
+    if (listHideShowBtn) listHideShowBtn.textContent = item.hidden ? '👁 Показать' : '🙈 Скрыть';
   }
 });
 socket.on('update-media-batch', (updates) => {
@@ -1160,14 +1171,43 @@ function addMediaToList(item) {
       if (localVid) { localVid.currentTime = 0; localVid.play().catch(() => {}); }
       const cEl = document.getElementById('cm-' + item.id);
       if (cEl) applyPosition(cEl, item);
+      hideShowBtn.textContent = '🙈 Скрыть';
+      const smallHideBtn = cEl ? cEl.querySelector('.item-btn:nth-child(3)') : null;
+      if (smallHideBtn) smallHideBtn.textContent = '👁';
     };
 
     const pauseBtn = document.createElement('button');
-    pauseBtn.textContent = '⏸'; pauseBtn.className = 'secondary'; pauseBtn.title = 'Пауза';
+    pauseBtn.textContent = '⏸'; pauseBtn.className = 'secondary'; pauseBtn.title = 'Пауза (без скрытия)';
     pauseBtn.onclick = () => {
       socket.emit('video-control', { id: item.id, action: 'pause' });
       const localVid = document.getElementById('vid-' + item.id);
       if (localVid) localVid.pause();
+    };
+
+    const hideShowBtn = document.createElement('button');
+    hideShowBtn.id = 'hidebtn-' + item.id;
+    hideShowBtn.className = 'secondary';
+    hideShowBtn.textContent = item.hidden ? '👁 Показать' : '🙈 Скрыть';
+    hideShowBtn.title = 'Скрыть — исчезнет со стрима, но останется в файлах. Показать — появится и начнётся заново.';
+    hideShowBtn.onclick = () => {
+      item.hidden = !item.hidden;
+      hideShowBtn.textContent = item.hidden ? '👁 Показать' : '🙈 Скрыть';
+      const localVid = document.getElementById('vid-' + item.id);
+      if (localVid) {
+        if (item.hidden) {
+          localVid.pause();
+        } else {
+          localVid.currentTime = 0;
+          localVid.play().catch(() => {});
+        }
+      }
+      const cEl = document.getElementById('cm-' + item.id);
+      if (cEl) {
+        applyPosition(cEl, item);
+        const smallHideBtn = cEl.querySelector('.item-btn:nth-child(3)');
+        if (smallHideBtn) smallHideBtn.textContent = item.hidden ? '🙈' : '👁';
+      }
+      sendUpdate(item);
     };
 
     const loopLabel = document.createElement('label');
@@ -1198,6 +1238,7 @@ function addMediaToList(item) {
 
     vControls.appendChild(playBtn);
     vControls.appendChild(pauseBtn);
+    vControls.appendChild(hideShowBtn);
     vControls.appendChild(loopLabel);
     vControls.appendChild(obsVolControl);
     vControls.appendChild(siteVolControl);
