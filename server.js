@@ -148,6 +148,7 @@ io.on('connection', (socket) => {
     if (data.loop !== undefined) item.loop = data.loop;
     if (data.volume !== undefined) item.volume = data.volume;
     if (data.opacity !== undefined) item.opacity = data.opacity;
+    if (data.rotation !== undefined) item.rotation = data.rotation;
     socket.broadcast.emit('update-media', data);
     saveStateDebounced();
   });
