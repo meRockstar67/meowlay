@@ -1178,6 +1178,13 @@ function addMediaToList(item) {
   };
   li.appendChild(btn);
   mediaListEl.appendChild(li);
+
+  // Ползунки/кнопки/чекбоксы внутри строки не должны запускать
+  // перетаскивание строки (оно нужно только для смены порядка слоёв)
+  li.querySelectorAll('input, button, select').forEach((ctrl) => {
+    ctrl.draggable = false;
+    ctrl.addEventListener('mousedown', (e) => e.stopPropagation());
+  });
   refreshFolderSelects();
 }
 
