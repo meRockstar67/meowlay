@@ -686,12 +686,8 @@ function createOrUpdateMedia(item) {
     if (item.type === 'video') {
       const videoEl = document.getElementById('vid-' + item.id);
       if (videoEl) {
-        // Снимаем mute чуть позже — так надёжнее проходит автоплей
-        // в обычной вкладке браузера (не как в OBS, тут политика строже)
-        setTimeout(() => {
-          videoEl.muted = false;
-          videoEl.volume = 1;
-        }, 300);
+        // Звук на сайте по умолчанию выключен (0%) — видео просто играет
+        // молча, пока сам не поднимешь ползунок "Сайт"
         videoEl.addEventListener('ended', () => {
           if (!videoEl.loop) {
             item.opacity = 0;
@@ -1274,7 +1270,7 @@ function addMediaToList(item) {
       sendUpdate(item);
     });
 
-    const siteVolControl = createPercentControl('sitevol-' + item.id, '🎧 Сайт', 100, 5, 'Громкость только у тебя на сайте (не влияет на стрим)', (v) => {
+    const siteVolControl = createPercentControl('sitevol-' + item.id, '🎧 Сайт', 0, 5, 'Громкость только у тебя на сайте (не влияет на стрим)', (v) => {
       const localVid = document.getElementById('vid-' + item.id);
       if (localVid) {
         localVid.muted = false;
