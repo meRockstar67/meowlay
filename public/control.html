@@ -686,7 +686,12 @@ function createOrUpdateMedia(item) {
     if (item.type === 'video') {
       const videoEl = document.getElementById('vid-' + item.id);
       if (videoEl) {
-        videoEl.volume = 0; // локальный звук на сайте по умолчанию выключен
+        // Снимаем mute чуть позже — так надёжнее проходит автоплей
+        // в обычной вкладке браузера (не как в OBS, тут политика строже)
+        setTimeout(() => {
+          videoEl.muted = false;
+          videoEl.volume = 1;
+        }, 300);
         videoEl.addEventListener('ended', () => {
           if (!videoEl.loop) {
             item.opacity = 0;
@@ -962,7 +967,7 @@ document.getElementById('media-file').addEventListener('change', (e) => {
     const item = {
       id, type: isVideo ? 'video' : 'image', url: reader.result,
       x: spawn.x, y: spawn.y, w: 0.4, h: 0.4, z: 9999,
-      hidden: false, loop: false, volume: 100
+      hidden: false, loop: false, volume: 0
     };
     socket.emit('add-media', item);
     createOrUpdateMedia(item);
@@ -1269,7 +1274,7 @@ function addMediaToList(item) {
       sendUpdate(item);
     });
 
-    const siteVolControl = createPercentControl('sitevol-' + item.id, '🎧 Сайт', 0, 5, 'Громкость только у тебя на сайте (не влияет на стрим)', (v) => {
+    const siteVolControl = createPercentControl('sitevol-' + item.id, '🎧 Сайт', 100, 5, 'Громкость только у тебя на сайте (не влияет на стрим)', (v) => {
       const localVid = document.getElementById('vid-' + item.id);
       if (localVid) {
         localVid.muted = false;
