@@ -77,8 +77,6 @@ function drawShape(obj) {
   const x0 = obj.x0 * canvas.width, y0 = obj.y0 * canvas.height;
   const x1 = obj.x1 * canvas.width, y1 = obj.y1 * canvas.height;
   ctx.globalCompositeOperation = 'source-over';
-  ctx.strokeStyle = obj.color;
-  ctx.lineWidth = obj.size;
   ctx.beginPath();
   if (obj.shapeType === 'rect') {
     ctx.rect(x0, y0, x1 - x0, y1 - y0);
@@ -91,7 +89,14 @@ function drawShape(obj) {
     const outerR = Math.min(Math.abs(x1 - x0), Math.abs(y1 - y0)) / 2;
     drawStarPath(cx, cy, outerR || 1, (outerR || 1) * 0.5);
   }
-  ctx.stroke();
+  if (obj.filled) {
+    ctx.fillStyle = obj.color;
+    ctx.fill();
+  } else {
+    ctx.strokeStyle = obj.color;
+    ctx.lineWidth = obj.size;
+    ctx.stroke();
+  }
 }
 
 function drawText(obj) {
@@ -170,6 +175,21 @@ function createOrUpdateMedia(item) {
 
     if (item.type === 'image') {
       inner.innerHTML = '<img src="' + item.url + '">';
+    } else if (item.type === 'text') {
+      const textDiv = document.createElement('div');
+      textDiv.className = 'text-content';
+      textDiv.textContent = item.text;
+      textDiv.style.width = '100%';
+      textDiv.style.height = '100%';
+      textDiv.style.display = 'flex';
+      textDiv.style.alignItems = 'center';
+      textDiv.style.justifyContent = 'center';
+      textDiv.style.color = item.color;
+      textDiv.style.fontSize = (item.fontSize || 32) + 'px';
+      textDiv.style.fontWeight = 'bold';
+      textDiv.style.fontFamily = 'sans-serif';
+      textDiv.style.whiteSpace = 'nowrap';
+      inner.appendChild(textDiv);
     } else if (item.type === 'youtube') {
       const origin = encodeURIComponent(location.origin);
       inner.innerHTML = '<iframe id="yt-' + item.id + '" src="https://www.youtube.com/embed/' +
@@ -198,11 +218,20 @@ function updateMediaPosition(data) {
     if (data.zoom !== undefined) cached.zoom = data.zoom;
     if (data.offsetX !== undefined) cached.offsetX = data.offsetX;
     if (data.offsetY !== undefined) cached.offsetY = data.offsetY;
+    if (data.fontSize !== undefined) cached.fontSize = data.fontSize;
+    if (data.color !== undefined) cached.color = data.color;
   }
   const el = document.getElementById('m-' + data.id);
   if (el) {
     applyPosition(el, data);
     applyCropTransform(el, cached || data);
+    if (cached && cached.type === 'text') {
+      const textDiv = el.querySelector('.text-content');
+      if (textDiv) {
+        textDiv.style.fontSize = (cached.fontSize || 32) + 'px';
+        textDiv.style.color = cached.color;
+      }
+    }
   }
 }
 
