@@ -37,6 +37,10 @@ let historyList = [];
 socket.on('connect', () => socket.emit('overlay-join'));
 
 socket.on('state', (state) => {
+  // Полностью пересобираем сцену с нуля — важно для Ctrl+Z: объекты,
+  // которых больше нет в новом состоянии, должны реально исчезнуть
+  mediaLayer.innerHTML = '';
+  for (const k in mediaCache) delete mediaCache[k];
   Object.values(state.media).forEach(createOrUpdateMedia);
   historyList = state.history || [];
   replayHistory();

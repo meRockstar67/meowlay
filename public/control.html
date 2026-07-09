@@ -91,6 +91,7 @@
     <label>Толщина кисти: <input type="range" id="size" min="1" max="40" value="4"></label>
     <label><input type="checkbox" id="fill-toggle"> Заливка фигур</label>
     <button id="undo-btn" class="secondary">↩ Отменить (Ctrl+Z)</button>
+    <button id="redo-btn" class="secondary">↪ Повторить (Ctrl+Shift+Z)</button>
     <button id="clear-canvas-btn" class="secondary">Очистить всё</button>
   </div>
 
@@ -113,7 +114,8 @@
     таскать/удалять их вместе (Delete — удалить выделенное). Alt+перетаскивание
     по объекту — обрезка/сдвиг картинки внутри рамки, Alt+перетаскивание за
     уголок — приближение. Двойной клик по объекту сбрасывает обрезку. Ctrl+Z
-    отменяет последнее действие. Текст можно увеличить, потянув за синий
+    отменяет последнее действие — вообще любое (перемещение, удаление,
+    поворот, папки и т.д.), не только рисунок. Текст можно увеличить, потянув за синий
     квадратик (растёт вместе с рамкой), либо ползунком "Размер" в списке
     активных медиа. В списке "Активные медиа" ниже можно тянуть строки
     мышкой, чтобы менять, что поверх чего отображается (слои), а также
@@ -174,7 +176,20 @@ socket.on('auth-result', (ok) => {
   else { statusEl.textContent = '❌ Неверный пароль. Обнови страницу и попробуй снова.'; }
 });
 
+// Вызывается ПЕРЕД любым значимым действием — сервер сохранит снимок
+// состояния "до", чтобы Ctrl+Z мог его вернуть
+function checkpoint() {
+  if (authed) socket.emit('checkpoint');
+}
+
 socket.on('state', (state) => {
+  // Полная пересборка сцены с нуля — важно для Ctrl+Z: объекты, которых
+  // больше нет в присланном состоянии, должны реально исчезнуть, а не
+  // оставаться "призраками" на экране
+  mediaLayer.innerHTML = '';
+  mediaListEl.innerHTML = '';
+  for (const k in mediaItemsLocal) delete mediaItemsLocal[k];
+  selectedIds.clear();
   Object.values(state.media).forEach(createOrUpdateMedia);
   historyList = state.history || [];
   replayHistory();
@@ -338,11 +353,16 @@ socket.on('clear-canvas', () => {
 });
 
 document.getElementById('clear-canvas-btn').addEventListener('click', () => {
+  checkpoint();
   socket.emit('clear-canvas');
 });
 document.getElementById('undo-btn').addEventListener('click', () => {
   if (!authed) return;
-  socket.emit('undo-draw');
+  socket.emit('undo');
+});
+document.getElementById('redo-btn').addEventListener('click', () => {
+  if (!authed) return;
+  socket.emit('redo');
 });
 document.addEventListener('keydown', (e) => {
   // Используем e.code (физическая клавиша), а не e.key — иначе на русской
@@ -350,7 +370,8 @@ document.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') {
     e.preventDefault();
     if (!authed) return;
-    socket.emit('undo-draw');
+    if (e.shiftKey) socket.emit('redo');
+    else socket.emit('undo');
   }
 });
 
@@ -373,16 +394,19 @@ function startAction(e) {
   clearSelection();
 
   if (tool === 'pen' || tool === 'eraser') {
+    checkpoint();
     drawing = true;
     lastPos = getPos(e);
     currentStrokeId = 'stroke' + Date.now() + Math.random().toString(36).slice(2);
   } else if (tool === 'rect' || tool === 'circle' || tool === 'star') {
+    checkpoint();
     shapeDragging = true;
     shapeStart = getPos(e);
   } else if (tool === 'text') {
     const pos = getPos(e);
     const text = prompt('Введите текст:');
     if (text) {
+      checkpoint();
       const item = {
         id: 'id' + Date.now() + Math.random().toString(36).slice(2),
         type: 'text', text, color: colorInput.value, fontScale: 0.6,
@@ -497,6 +521,7 @@ document.addEventListener('keydown', (e) => {
   if (tag === 'INPUT' || tag === 'TEXTAREA') return;
   if (selectedIds.size === 0) return;
   e.preventDefault();
+  checkpoint();
   Array.from(selectedIds).forEach((id) => {
     socket.emit('remove-media', id);
     removeMediaLocal(id);
@@ -625,6 +650,7 @@ function createOrUpdateMedia(item) {
     fullBtn.className = 'item-btn'; fullBtn.title = 'На весь экран'; fullBtn.textContent = '⛶';
     fullBtn.onclick = (ev) => {
       ev.stopPropagation();
+      checkpoint();
       item.x = 0; item.y = 0; item.w = 1; item.h = 1;
       applyPosition(el, item);
       sendUpdate(item);
@@ -634,6 +660,7 @@ function createOrUpdateMedia(item) {
     returnBtn.className = 'item-btn'; returnBtn.title = 'Вернуть в кадр'; returnBtn.textContent = '↩';
     returnBtn.onclick = (ev) => {
       ev.stopPropagation();
+      checkpoint();
       item.x = 0.3; item.y = 0.3;
       applyPosition(el, item);
       sendUpdate(item);
@@ -644,6 +671,7 @@ function createOrUpdateMedia(item) {
     hideBtn.textContent = (item.type === 'video' ? item.opacity === 0 : item.hidden) ? '🙈' : '👁';
     hideBtn.onclick = (ev) => {
       ev.stopPropagation();
+      checkpoint();
       if (item.type === 'video') {
         const willHide = item.opacity !== 0;
         item.opacity = willHide ? 0 : 100;
@@ -676,6 +704,7 @@ function createOrUpdateMedia(item) {
     removeBtn.className = 'item-btn remove'; removeBtn.title = 'Удалить'; removeBtn.textContent = '✕';
     removeBtn.onclick = (ev) => {
       ev.stopPropagation();
+      checkpoint();
       socket.emit('remove-media', item.id);
       removeMediaLocal(item.id);
     };
@@ -701,6 +730,7 @@ function createOrUpdateMedia(item) {
 
     el.addEventListener('dblclick', (e) => {
       if (e.target.closest('.resize-handle') || e.target.closest('.item-btn')) return;
+      checkpoint();
       item.zoom = 1; item.offsetX = 0; item.offsetY = 0;
       applyCropTransform(el, item);
       sendUpdate(item);
@@ -742,6 +772,7 @@ function makeDraggable(el, item) {
     e.preventDefault(); // не даём браузеру выделить/перетащить картинку нативно
 
     if (e.altKey) {
+      checkpoint();
       const cropRect = el.getBoundingClientRect();
       const cropStartX = e.clientX, cropStartY = e.clientY;
       const startOffsetX = item.offsetX || 0;
@@ -765,6 +796,7 @@ function makeDraggable(el, item) {
 
     if (e.shiftKey) { toggleSelect(item.id); return; }
     if (!selectedIds.has(item.id)) { selectOnly(item.id); }
+    checkpoint();
 
     const rect = canvasWrap.getBoundingClientRect();
     const startX = e.clientX, startY = e.clientY;
@@ -803,6 +835,7 @@ function makeResizable(handle, el, item) {
   handle.addEventListener('mousedown', (e) => {
     e.stopPropagation();
     e.preventDefault();
+    checkpoint();
     if (e.altKey) {
       const zoomStartY = e.clientY;
       const startZoom = item.zoom || 1;
@@ -847,6 +880,7 @@ function makeRotatable(handle, el, item) {
   handle.addEventListener('mousedown', (e) => {
     e.stopPropagation();
     e.preventDefault();
+    checkpoint();
 
     function onMove(ev) {
       const rect = el.getBoundingClientRect();
@@ -1001,6 +1035,7 @@ document.getElementById('add-media-btn').addEventListener('click', () => {
     if (!vid) return alert('Не получилось распознать ссылку на YouTube');
     item.videoId = vid;
   }
+  checkpoint();
   socket.emit('add-media', item);
   createOrUpdateMedia(item);
   sortMediaList();
@@ -1027,6 +1062,7 @@ document.getElementById('media-file').addEventListener('change', (e) => {
       x: spawn.x, y: spawn.y, w: 0.4, h: 0.4, z: 9999,
       hidden: false, loop: false, volume: 0
     };
+    checkpoint();
     socket.emit('add-media', item);
     createOrUpdateMedia(item);
     sortMediaList();
@@ -1036,6 +1072,7 @@ document.getElementById('media-file').addEventListener('change', (e) => {
 });
 
 document.getElementById('clear-media-btn').addEventListener('click', () => {
+  checkpoint();
   socket.emit('clear-media');
   mediaLayer.innerHTML = '';
   mediaListEl.innerHTML = '';
@@ -1125,9 +1162,14 @@ function createPercentControl(idSuffix, labelText, initialValue, step, title, on
     valSpan.textContent = v + suffix;
     onChange(v);
   }
-  minusBtn.onclick = () => setValue(parseInt(slider.value, 10) - step);
-  plusBtn.onclick = () => setValue(parseInt(slider.value, 10) + step);
-  slider.oninput = () => setValue(parseInt(slider.value, 10));
+  minusBtn.onclick = () => { checkpoint(); setValue(parseInt(slider.value, 10) - step); };
+  plusBtn.onclick = () => { checkpoint(); setValue(parseInt(slider.value, 10) + step); };
+  let sliderCheckpointed = false;
+  slider.addEventListener('mousedown', () => { sliderCheckpointed = false; });
+  slider.oninput = () => {
+    if (!sliderCheckpointed) { checkpoint(); sliderCheckpointed = true; }
+    setValue(parseInt(slider.value, 10));
+  };
 
   wrap.appendChild(lbl);
   wrap.appendChild(minusBtn);
@@ -1144,6 +1186,7 @@ function addMediaToList(item) {
   li.draggable = true;
 
   li.addEventListener('dragstart', (e) => {
+    checkpoint();
     li.classList.add('dragging');
     e.dataTransfer.setData('text/plain', item.id);
   });
@@ -1171,6 +1214,7 @@ function addMediaToList(item) {
   renameBtn.onclick = () => {
     const newName = prompt('Название для этого объекта:', item.label || (typeLabel + ': ' + shortUrl));
     if (newName === null) return;
+    checkpoint();
     item.label = newName.trim();
     labelSpan.textContent = item.label ? item.label : (typeLabel + ': ' + shortUrl);
     socket.emit('rename-media', { id: item.id, label: item.label });
@@ -1182,6 +1226,7 @@ function addMediaToList(item) {
   folderSelect.className = 'folder-select';
   folderSelect.dataset.itemId = item.id;
   folderSelect.addEventListener('change', () => {
+    checkpoint();
     socket.emit('assign-folder', { itemId: item.id, folderId: folderSelect.value || null });
   });
   li.appendChild(folderSelect);
@@ -1198,7 +1243,10 @@ function addMediaToList(item) {
     fsInput.value = Math.round((item.fontScale || 0.6) * 100);
     fsInput.style.width = '80px';
     fsInput.title = 'Размер текста относительно рамки (тяни синий квадратик, чтобы менять и саму рамку)';
+    let fsCheckpointed = false;
+    fsInput.addEventListener('mousedown', () => { fsCheckpointed = false; });
     fsInput.oninput = () => {
+      if (!fsCheckpointed) { checkpoint(); fsCheckpointed = true; }
       item.fontScale = parseInt(fsInput.value, 10) / 100;
       const el = document.getElementById('cm-' + item.id);
       if (el) applyPosition(el, item);
@@ -1207,7 +1255,10 @@ function addMediaToList(item) {
 
     const colorPicker = document.createElement('input');
     colorPicker.type = 'color'; colorPicker.value = item.color;
+    let colorCheckpointed = false;
+    colorPicker.addEventListener('mousedown', () => { colorCheckpointed = false; });
     colorPicker.oninput = () => {
+      if (!colorCheckpointed) { checkpoint(); colorCheckpointed = true; }
       item.color = colorPicker.value;
       const el = document.getElementById('cm-' + item.id);
       if (el) updateTextStyle(el, item);
@@ -1226,11 +1277,11 @@ function addMediaToList(item) {
 
     const playBtn = document.createElement('button');
     playBtn.textContent = '▶'; playBtn.className = 'secondary'; playBtn.title = 'Запустить';
-    playBtn.onclick = () => socket.emit('youtube-control', { id: item.id, action: 'play' });
+    playBtn.onclick = () => { checkpoint(); socket.emit('youtube-control', { id: item.id, action: 'play' }); };
 
     const pauseBtn = document.createElement('button');
     pauseBtn.textContent = '⏸'; pauseBtn.className = 'secondary'; pauseBtn.title = 'Пауза';
-    pauseBtn.onclick = () => socket.emit('youtube-control', { id: item.id, action: 'pause' });
+    pauseBtn.onclick = () => { checkpoint(); socket.emit('youtube-control', { id: item.id, action: 'pause' }); };
 
     const volControl = createPercentControl('ytvol-' + item.id, '🔊', 100, 5, 'Громкость на стриме', (v) => {
       socket.emit('youtube-control', { id: item.id, action: 'volume', value: v });
@@ -1251,6 +1302,7 @@ function addMediaToList(item) {
     const restartBtn = document.createElement('button');
     restartBtn.textContent = '⏮'; restartBtn.className = 'secondary'; restartBtn.title = 'Начать сначала';
     restartBtn.onclick = () => {
+      checkpoint();
       item.opacity = 100;
       sendUpdate(item);
       socket.emit('video-control', { id: item.id, action: 'restart' });
@@ -1270,6 +1322,7 @@ function addMediaToList(item) {
     const pauseBtn = document.createElement('button');
     pauseBtn.textContent = '⏸ Пауза'; pauseBtn.className = 'secondary'; pauseBtn.title = 'Пауза / продолжить с того же места';
     pauseBtn.onclick = () => {
+      checkpoint();
       const localVid = document.getElementById('vid-' + item.id);
       const isPaused = localVid ? localVid.paused : false;
       if (isPaused) {
@@ -1291,6 +1344,7 @@ function addMediaToList(item) {
     hideShowBtn.textContent = (item.opacity === 0) ? '👁 Показать' : '🙈 Скрыть';
     hideShowBtn.title = 'Скрыть — прозрачность 0% и пауза (останется в файлах). Показать — снова видно и начнётся заново.';
     hideShowBtn.onclick = () => {
+      checkpoint();
       const willHide = item.opacity !== 0;
       item.opacity = willHide ? 0 : 100;
       hideShowBtn.textContent = willHide ? '👁 Показать' : '🙈 Скрыть';
@@ -1321,6 +1375,7 @@ function addMediaToList(item) {
     const loopCheckbox = document.createElement('input');
     loopCheckbox.type = 'checkbox'; loopCheckbox.checked = !!item.loop;
     loopCheckbox.onchange = () => {
+      checkpoint();
       item.loop = loopCheckbox.checked;
       const localVid = document.getElementById('vid-' + item.id);
       if (localVid) localVid.loop = item.loop;
@@ -1383,7 +1438,7 @@ function addMediaToList(item) {
   const rotateLeftBtn = document.createElement('button');
   rotateLeftBtn.textContent = '⟲ -90°'; rotateLeftBtn.className = 'secondary';
   rotateLeftBtn.title = 'Повернуть на 90° против часовой';
-  rotateLeftBtn.onclick = () => setRotation((item.rotation || 0) - 90);
+  rotateLeftBtn.onclick = () => { checkpoint(); setRotation((item.rotation || 0) - 90); };
 
   const rotationControl = createPercentControl(
     'rotation-' + item.id, '🔄 Поворот', item.rotation, 15,
@@ -1395,7 +1450,7 @@ function addMediaToList(item) {
   const rotateRightBtn = document.createElement('button');
   rotateRightBtn.textContent = '⟳ +90°'; rotateRightBtn.className = 'secondary';
   rotateRightBtn.title = 'Повернуть на 90° по часовой';
-  rotateRightBtn.onclick = () => setRotation((item.rotation || 0) + 90);
+  rotateRightBtn.onclick = () => { checkpoint(); setRotation((item.rotation || 0) + 90); };
 
   rotationWrap.appendChild(rotateLeftBtn);
   rotationWrap.appendChild(rotationControl);
@@ -1406,6 +1461,7 @@ function addMediaToList(item) {
   btn.textContent = 'Убрать';
   btn.className = 'secondary';
   btn.onclick = () => {
+    checkpoint();
     socket.emit('remove-media', item.id);
     removeMediaLocal(item.id);
   };
@@ -1427,6 +1483,7 @@ document.getElementById('create-folder-btn').addEventListener('click', () => {
   const input = document.getElementById('folder-name-input');
   const name = input.value.trim();
   if (!name) return;
+  checkpoint();
   socket.emit('create-folder', name);
   input.value = '';
 });
@@ -1496,6 +1553,7 @@ function renderFoldersList() {
     renameBtn.onclick = () => {
       const newName = prompt('Новое название папки:', f.name);
       if (newName && newName.trim()) {
+        checkpoint();
         socket.emit('rename-folder', { id: f.id, name: newName.trim() });
       }
     };
@@ -1503,7 +1561,7 @@ function renderFoldersList() {
     const delBtn = document.createElement('button');
     delBtn.textContent = 'Удалить папку';
     delBtn.className = 'secondary';
-    delBtn.onclick = () => socket.emit('delete-folder', f.id);
+    delBtn.onclick = () => { checkpoint(); socket.emit('delete-folder', f.id); };
 
     btns.appendChild(selectBtn);
     btns.appendChild(renameBtn);
@@ -1561,7 +1619,7 @@ function renderFoldersList() {
         subRemoveBtn.className = 'secondary';
         subRemoveBtn.style.fontSize = '12px';
         subRemoveBtn.style.padding = '4px 8px';
-        subRemoveBtn.onclick = () => socket.emit('assign-folder', { itemId, folderId: null });
+        subRemoveBtn.onclick = () => { checkpoint(); socket.emit('assign-folder', { itemId, folderId: null }); };
 
         subBtns.appendChild(subSelectBtn);
         subBtns.appendChild(subRemoveBtn);
@@ -1583,7 +1641,7 @@ function renderFoldersList() {
       e.preventDefault();
       li.style.background = '';
       const itemId = e.dataTransfer.getData('text/plain');
-      if (itemId) socket.emit('assign-folder', { itemId, folderId: f.id });
+      if (itemId) { checkpoint(); socket.emit('assign-folder', { itemId, folderId: f.id }); }
     });
 
     foldersListEl.appendChild(li);
@@ -1604,7 +1662,7 @@ function renderFoldersList() {
     e.preventDefault();
     noFolderLi.style.background = '';
     const itemId = e.dataTransfer.getData('text/plain');
-    if (itemId) socket.emit('assign-folder', { itemId, folderId: null });
+    if (itemId) { checkpoint(); socket.emit('assign-folder', { itemId, folderId: null }); }
   });
   foldersListEl.appendChild(noFolderLi);
 }
