@@ -61,6 +61,15 @@
   .media-item .item-btn { width: 26px; height: 26px; border-radius: 50%; background: #444; color: #fff; border: 0; font-size: 13px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
   .media-item .item-btn.remove { background: #e33; }
   .resize-handle { position: absolute; right: -8px; bottom: -8px; width: 16px; height: 16px; background: #5865f2; border-radius: 3px; cursor: nwse-resize; pointer-events: auto; }
+  .rotate-handle {
+    position: absolute; top: -28px; left: 50%; transform: translateX(-50%);
+    width: 16px; height: 16px; background: #ffcc00; border-radius: 50%;
+    cursor: grab; pointer-events: auto; border: 2px solid #1e1e2e;
+  }
+  .rotate-handle::after {
+    content: ''; position: absolute; top: 16px; left: 50%; width: 1px; height: 12px;
+    background: #ffcc00; transform: translateX(-50%);
+  }
   .hint { text-align: center; font-size: 13px; color: #999; margin-bottom: 12px; }
 </style>
 </head>
@@ -681,8 +690,14 @@ function createOrUpdateMedia(item) {
     handle.className = 'resize-handle';
     el.appendChild(handle);
 
+    const rotateHandle = document.createElement('div');
+    rotateHandle.className = 'rotate-handle';
+    rotateHandle.title = 'Тяни, чтобы свободно вращать';
+    el.appendChild(rotateHandle);
+
     makeDraggable(el, item);
     makeResizable(handle, el, item);
+    makeRotatable(rotateHandle, el, item);
 
     el.addEventListener('dblclick', (e) => {
       if (e.target.closest('.resize-handle') || e.target.closest('.item-btn')) return;
@@ -816,6 +831,40 @@ function makeResizable(handle, el, item) {
       item.h = Math.max(0.05, startH + dy);
       applyPosition(el, item);
       sendUpdate(item);
+    }
+    function onUp() {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  });
+}
+
+// Свободное вращение — тянешь жёлтую ручку сверху объекта в любую сторону,
+// угол считается от центра объекта до курсора мыши (как в OBS)
+function makeRotatable(handle, el, item) {
+  handle.addEventListener('mousedown', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    function onMove(ev) {
+      const rect = el.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const dx = ev.clientX - centerX;
+      const dy = ev.clientY - centerY;
+      // 0° — ручка сверху (прямо над центром), дальше по часовой стрелке
+      let angleDeg = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+      angleDeg = ((angleDeg % 360) + 360) % 360;
+      item.rotation = Math.round(angleDeg);
+      applyPosition(el, item);
+      sendUpdate(item);
+
+      const slider = document.getElementById('rotation-' + item.id);
+      if (slider) slider.value = item.rotation;
+      const val = document.getElementById('rotation-' + item.id + '-val');
+      if (val) val.textContent = item.rotation + '°';
     }
     function onUp() {
       window.removeEventListener('mousemove', onMove);
