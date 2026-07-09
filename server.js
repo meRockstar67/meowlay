@@ -4,6 +4,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
@@ -20,6 +21,40 @@ let mediaItems = {};   // id -> {id, type, url, x, y, w, h, z, zoom, offsetX, of
 let history = [];      // [{ id, kind: 'stroke'|'shape'|'text', ... }]
 let folders = {};      // id -> { id, name, memberIds: [] }
 let nextZ = 1;
+
+// --- Сохранение состояния на диск, чтобы всё восстанавливалось после
+// перезапуска сервера (например, когда бесплатный тариф "засыпает" от
+// простоя и потом просыпается заново) ---
+const STATE_FILE = path.join(__dirname, 'data', 'state.json');
+
+function loadState() {
+  try {
+    const raw = fs.readFileSync(STATE_FILE, 'utf8');
+    const data = JSON.parse(raw);
+    mediaItems = data.mediaItems || {};
+    history = data.history || [];
+    folders = data.folders || {};
+    nextZ = data.nextZ || 1;
+    console.log('Состояние восстановлено из файла (' + Object.keys(mediaItems).length + ' медиа-объектов)');
+  } catch (e) {
+    console.log('Сохранённого состояния не найдено — начинаем с чистого листа');
+  }
+}
+
+let saveTimeout = null;
+function saveStateDebounced() {
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    try {
+      fs.mkdirSync(path.dirname(STATE_FILE), { recursive: true });
+      fs.writeFileSync(STATE_FILE, JSON.stringify({ mediaItems, history, folders, nextZ }));
+    } catch (e) {
+      console.error('Не удалось сохранить состояние:', e.message);
+    }
+  }, 800);
+}
+
+loadState();
 
 function getOrCreateStroke(strokeId) {
   let entry = history.find(h => h.id === strokeId && h.kind === 'stroke');
@@ -60,24 +95,28 @@ io.on('connection', (socket) => {
     if (data.strokeId) {
       getOrCreateStroke(data.strokeId).segments.push(data);
     }
+    saveStateDebounced();
   });
 
   socket.on('add-object', (obj) => {
     if (!authed) return;
     history.push(obj);
     socket.broadcast.emit('add-object', obj);
+    saveStateDebounced();
   });
 
   socket.on('undo-draw', () => {
     if (!authed) return;
     history.pop();
     io.emit('redraw-canvas', { history });
+    saveStateDebounced();
   });
 
   socket.on('clear-canvas', () => {
     if (!authed) return;
     history = [];
     io.emit('clear-canvas');
+    saveStateDebounced();
   });
 
   // Добавление медиа — сразу назначаем слой (z), отправитель получает
@@ -88,6 +127,7 @@ io.on('connection', (socket) => {
     mediaItems[item.id] = item;
     socket.broadcast.emit('add-media', item);
     socket.emit('set-z', { id: item.id, z: item.z });
+    saveStateDebounced();
   });
 
   socket.on('update-media', (data) => {
@@ -105,6 +145,7 @@ io.on('connection', (socket) => {
     if (data.fontScale !== undefined) item.fontScale = data.fontScale;
     if (data.color !== undefined) item.color = data.color;
     socket.broadcast.emit('update-media', data);
+    saveStateDebounced();
   });
 
   socket.on('update-media-batch', (updates) => {
@@ -119,6 +160,7 @@ io.on('connection', (socket) => {
       }
     });
     socket.broadcast.emit('update-media-batch', updates);
+    saveStateDebounced();
   });
 
   // Изменение порядка слоёв — приходит полный список id "спереди назад"
@@ -128,6 +170,7 @@ io.on('connection', (socket) => {
       if (mediaItems[id]) mediaItems[id].z = idsInOrder.length - idx;
     });
     io.emit('reorder-media', idsInOrder);
+    saveStateDebounced();
   });
 
   socket.on('remove-media', (id) => {
@@ -136,6 +179,7 @@ io.on('connection', (socket) => {
     removeItemFromAllFolders(id);
     io.emit('remove-media', id);
     io.emit('folders-sync', folders);
+    saveStateDebounced();
   });
 
   socket.on('clear-media', () => {
@@ -144,6 +188,7 @@ io.on('connection', (socket) => {
     folders = {};
     io.emit('clear-media');
     io.emit('folders-sync', folders);
+    saveStateDebounced();
   });
 
   socket.on('youtube-control', (data) => {
@@ -157,12 +202,14 @@ io.on('connection', (socket) => {
     const id = 'folder' + Date.now() + Math.random().toString(36).slice(2);
     folders[id] = { id, name: (name || 'Папка').slice(0, 40), memberIds: [] };
     io.emit('folders-sync', folders);
+    saveStateDebounced();
   });
 
   socket.on('delete-folder', (id) => {
     if (!authed) return;
     delete folders[id];
     io.emit('folders-sync', folders);
+    saveStateDebounced();
   });
 
   socket.on('assign-folder', (data) => {
@@ -172,6 +219,7 @@ io.on('connection', (socket) => {
       folders[data.folderId].memberIds.push(data.itemId);
     }
     io.emit('folders-sync', folders);
+    saveStateDebounced();
   });
 });
 
