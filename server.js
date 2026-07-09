@@ -7,21 +7,24 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
 
-// Пароль для панели модератора.
-// Меняется в файле .env (переменная MOD_PASSWORD), см. README.
+// Увеличиваем лимит размера сообщения — нужно, чтобы можно было
+// пересылать картинки/гифки с компьютера (в виде base64) через сокет.
+const io = new Server(server, {
+  maxHttpBufferSize: 15 * 1024 * 1024 // 15 МБ
+});
+
+// Пароль для панели модератора. Задаётся в Render -> Environment Variables.
 const PASSWORD = process.env.MOD_PASSWORD || 'meowh0cki2026';
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Текущее состояние медиа-объектов на оверлее (чтобы новый модератор видел актуальную картину)
+// Текущее состояние медиа-объектов на оверлее
 let mediaItems = {};
 
 io.on('connection', (socket) => {
   let authed = false;
 
-  // Панель модератора присылает пароль
   socket.on('auth', (pass) => {
     if (pass === PASSWORD) {
       authed = true;
@@ -32,7 +35,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Оверлей (браузер-сурс в OBS) просто просит текущее состояние
   socket.on('overlay-join', () => {
     socket.emit('state', { media: mediaItems });
   });
@@ -47,10 +49,24 @@ io.on('connection', (socket) => {
     io.emit('clear-canvas');
   });
 
+  // Добавление нового медиа-объекта (полные данные, включая картинку/ссылку)
   socket.on('add-media', (item) => {
     if (!authed) return;
     mediaItems[item.id] = item;
-    io.emit('add-media', item);
+    socket.broadcast.emit('add-media', item);
+  });
+
+  // Перемещение/изменение размера существующего объекта (лёгкий payload,
+  // без пересылки самой картинки — только координаты)
+  socket.on('update-media', (data) => {
+    if (!authed) return;
+    const item = mediaItems[data.id];
+    if (!item) return;
+    item.x = data.x;
+    item.y = data.y;
+    item.w = data.w;
+    item.h = data.h;
+    socket.broadcast.emit('update-media', data);
   });
 
   socket.on('remove-media', (id) => {
