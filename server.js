@@ -22,9 +22,7 @@ let history = [];      // [{ id, kind: 'stroke'|'shape'|'text', ... }]
 let folders = {};      // id -> { id, name, memberIds: [] }
 let nextZ = 1;
 
-// --- Сохранение состояния на диск, чтобы всё восстанавливалось после
-// перезапуска сервера (например, когда бесплатный тариф "засыпает" от
-// простоя и потом просыпается заново) ---
+// --- Сохранение состояния на диск (переживает "засыпание" сервера) ---
 const STATE_FILE = path.join(__dirname, 'data', 'state.json');
 
 function loadState() {
@@ -55,6 +53,21 @@ function saveStateDebounced() {
 }
 
 loadState();
+
+// --- Универсальная отмена (Ctrl+Z) ---
+// Перед КАЖДЫМ значимым действием клиент присылает 'checkpoint' — мы
+// сохраняем полный снимок состояния "до" этого действия. Ctrl+Z достаёт
+// последний снимок и полностью восстанавливает по нему сцену у всех.
+let undoStack = [];
+let redoStack = [];
+const MAX_UNDO = 60;
+
+function pushCheckpoint() {
+  undoStack.push(JSON.stringify({ mediaItems, history, folders, nextZ }));
+  if (undoStack.length > MAX_UNDO) undoStack.shift();
+  // Новое действие "обнуляет" возможность повторить то, что было отменено раньше
+  redoStack = [];
+}
 
 function getOrCreateStroke(strokeId) {
   let entry = history.find(h => h.id === strokeId && h.kind === 'stroke');
@@ -89,6 +102,41 @@ io.on('connection', (socket) => {
     socket.emit('state', { media: mediaItems, history, folders });
   });
 
+  // Клиент шлёт это ПЕРЕД началом любого значимого действия (начало
+  // перетаскивания, добавление объекта, удаление и т.д.)
+  socket.on('checkpoint', () => {
+    if (!authed) return;
+    pushCheckpoint();
+  });
+
+  socket.on('undo', () => {
+    if (!authed) return;
+    if (undoStack.length === 0) return;
+    redoStack.push(JSON.stringify({ mediaItems, history, folders, nextZ }));
+    if (redoStack.length > MAX_UNDO) redoStack.shift();
+    const snapshot = JSON.parse(undoStack.pop());
+    mediaItems = snapshot.mediaItems;
+    history = snapshot.history;
+    folders = snapshot.folders;
+    nextZ = snapshot.nextZ;
+    io.emit('state', { media: mediaItems, history, folders });
+    saveStateDebounced();
+  });
+
+  socket.on('redo', () => {
+    if (!authed) return;
+    if (redoStack.length === 0) return;
+    undoStack.push(JSON.stringify({ mediaItems, history, folders, nextZ }));
+    if (undoStack.length > MAX_UNDO) undoStack.shift();
+    const snapshot = JSON.parse(redoStack.pop());
+    mediaItems = snapshot.mediaItems;
+    history = snapshot.history;
+    folders = snapshot.folders;
+    nextZ = snapshot.nextZ;
+    io.emit('state', { media: mediaItems, history, folders });
+    saveStateDebounced();
+  });
+
   socket.on('draw', (data) => {
     if (!authed) return;
     socket.broadcast.emit('draw', data);
@@ -102,13 +150,6 @@ io.on('connection', (socket) => {
     if (!authed) return;
     history.push(obj);
     socket.broadcast.emit('add-object', obj);
-    saveStateDebounced();
-  });
-
-  socket.on('undo-draw', () => {
-    if (!authed) return;
-    history.pop();
-    io.emit('redraw-canvas', { history });
     saveStateDebounced();
   });
 
