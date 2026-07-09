@@ -150,6 +150,33 @@ function applyPosition(el, item) {
       if (item.color) textDiv.style.color = item.color;
     }
   }
+  applyHiddenState(el, item);
+  if (item.type === 'video') {
+    const videoEl = document.getElementById('vid-' + item.id);
+    if (videoEl) {
+      videoEl.loop = !!item.loop;
+      if (item.volume !== undefined) videoEl.volume = item.volume / 100;
+    }
+  }
+}
+
+// Скрытие объекта — прячем визуально и ставим на паузу звук/видео, чтобы
+// не играло невидимым фоном
+function applyHiddenState(el, item) {
+  el.style.display = item.hidden ? 'none' : '';
+  if (item.type === 'video') {
+    const v = document.getElementById('vid-' + item.id);
+    if (v) {
+      if (item.hidden) v.pause();
+      else v.play().catch(() => {});
+    }
+  } else if (item.type === 'youtube') {
+    const iframe = document.getElementById('yt-' + item.id);
+    if (iframe && iframe.contentWindow) {
+      const func = item.hidden ? 'pauseVideo' : 'playVideo';
+      iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func, args: [] }), '*');
+    }
+  }
 }
 
 function applyCropTransform(el, item) {
@@ -183,6 +210,10 @@ function createOrUpdateMedia(item) {
 
     if (item.type === 'image') {
       inner.innerHTML = '<img src="' + item.url + '">';
+    } else if (item.type === 'video') {
+      inner.innerHTML = '<video id="vid-' + item.id + '" autoplay muted playsinline' +
+        (item.loop ? ' loop' : '') + ' style="width:100%;height:100%;object-fit:cover;">' +
+        '<source src="' + item.url + '"></video>';
     } else if (item.type === 'text') {
       const textDiv = document.createElement('div');
       textDiv.className = 'text-content';
@@ -201,7 +232,7 @@ function createOrUpdateMedia(item) {
     } else if (item.type === 'youtube') {
       const origin = encodeURIComponent(location.origin);
       inner.innerHTML = '<iframe id="yt-' + item.id + '" src="https://www.youtube.com/embed/' +
-        item.videoId + '?autoplay=1&enablejsapi=1&origin=' + origin +
+        item.videoId + '?autoplay=1&mute=1&enablejsapi=1&origin=' + origin +
         '" allow="autoplay; encrypted-media" allowfullscreen></iframe>';
     } else if (item.type === 'ninja') {
       inner.innerHTML = '<iframe src="' + item.url + '" allow="camera; microphone; autoplay"></iframe>';
@@ -210,6 +241,44 @@ function createOrUpdateMedia(item) {
     viewport.appendChild(inner);
     el.appendChild(viewport);
     mediaLayer.appendChild(el);
+
+    if (item.type === 'youtube') {
+      // Стартуем приглушённым (браузеры почти всегда разрешают такой автоплей),
+      // а затем несколько раз досылаем "включить звук" — плеер не всегда готов
+      // принять команду сразу же после создания
+      const sendYtCommand = (func, args) => {
+        const iframe = document.getElementById('yt-' + item.id);
+        if (iframe && iframe.contentWindow) {
+          iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func, args: args || [] }), '*');
+        }
+      };
+      [400, 1000, 2000, 3500].forEach((delay) => {
+        setTimeout(() => {
+          sendYtCommand('unMute');
+          sendYtCommand('setVolume', [100]);
+          sendYtCommand('playVideo');
+        }, delay);
+      });
+    }
+
+    if (item.type === 'video') {
+      const videoEl = document.getElementById('vid-' + item.id);
+      if (videoEl) {
+        // Снимаем беззвучный режим чуть позже — так надёжнее проходит автоплей
+        setTimeout(() => {
+          videoEl.muted = false;
+          videoEl.volume = (item.volume !== undefined ? item.volume : 100) / 100;
+        }, 300);
+
+        // Если видео не зациклено — по окончании скрываем объект целиком
+        videoEl.addEventListener('ended', () => {
+          if (!videoEl.loop) {
+            item.hidden = true;
+            applyHiddenState(el, item);
+          }
+        });
+      }
+    }
   }
   applyPosition(el, item);
   applyCropTransform(el, item);
@@ -228,6 +297,9 @@ function updateMediaPosition(data) {
     if (data.offsetY !== undefined) cached.offsetY = data.offsetY;
     if (data.fontScale !== undefined) cached.fontScale = data.fontScale;
     if (data.color !== undefined) cached.color = data.color;
+    if (data.hidden !== undefined) cached.hidden = data.hidden;
+    if (data.loop !== undefined) cached.loop = data.loop;
+    if (data.volume !== undefined) cached.volume = data.volume;
   }
   const el = document.getElementById('m-' + data.id);
   if (el) {
@@ -273,6 +345,20 @@ socket.on('youtube-control', (data) => {
   else if (data.action === 'mute') func = 'mute';
   else if (data.action === 'unmute') func = 'unMute';
   if (func) iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func, args }), '*');
+});
+
+// --- Управление загруженным видео (play всегда сначала, pause) ---
+socket.on('video-control', (data) => {
+  const videoEl = document.getElementById('vid-' + data.id);
+  if (!videoEl) return;
+  if (data.action === 'play') {
+    const cached = mediaCache[data.id];
+    if (cached) { cached.hidden = false; applyHiddenState(document.getElementById('m-' + data.id), cached); }
+    videoEl.currentTime = 0;
+    videoEl.play().catch(() => {});
+  } else if (data.action === 'pause') {
+    videoEl.pause();
+  }
 });
 </script>
 </body>

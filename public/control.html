@@ -110,7 +110,11 @@
     мышкой, чтобы менять, что поверх чего отображается (слои), а также
     перетаскивать их прямо на папку в разделе "Папки". Вверху можно
     подключить предпросмотр Twitch-стрима — тогда вместо серого фона
-    будет видно саму трансляцию, поверх которой ты рисуешь.
+    будет видно саму трансляцию, поверх которой ты рисуешь. Кнопка 👁 —
+    скрыть/показать объект (не удаляя). Для загруженного видео: кнопка ▶
+    в списке всегда запускает видео сначала, "Зациклить" — крутить по
+    кругу как гифку, есть отдельные ползунки громкости для OBS и для
+    себя на сайте.
   </div>
 
   <h3>Добавить медиа</h3>
@@ -125,8 +129,8 @@
   </div>
   <div class="media-form">
     <label style="background:#5865f2; padding:8px 12px; border-radius:6px; cursor:pointer;">
-      📁 Загрузить фото/гифку с компьютера
-      <input type="file" id="media-file" accept="image/*" style="display:none;">
+      📁 Загрузить фото/гифку/видео с компьютера
+      <input type="file" id="media-file" accept="image/*,video/*" style="display:none;">
     </label>
     <button id="clear-media-btn" class="secondary">Убрать всё медиа</button>
   </div>
@@ -499,7 +503,8 @@ function sendUpdate(item) {
   socket.emit('update-media', {
     id: item.id, x: item.x, y: item.y, w: item.w, h: item.h,
     zoom: item.zoom || 1, offsetX: item.offsetX || 0, offsetY: item.offsetY || 0,
-    fontScale: item.fontScale, color: item.color
+    fontScale: item.fontScale, color: item.color,
+    hidden: item.hidden, loop: item.loop, volume: item.volume
   });
 }
 
@@ -523,6 +528,7 @@ function applyPosition(el, item) {
   el.style.top = (item.y * 100) + '%';
   el.style.width = (item.w * 100) + '%';
   el.style.height = (item.h * 100) + '%';
+  el.style.opacity = item.hidden ? '0.35' : '1';
   if (item.type === 'text') {
     const textDiv = el.querySelector('.text-content');
     if (textDiv) {
@@ -533,6 +539,10 @@ function applyPosition(el, item) {
       if (item.color) textDiv.style.color = item.color;
     }
   }
+  if (item.type === 'video') {
+    const videoEl = document.getElementById('vid-' + item.id);
+    if (videoEl) videoEl.loop = !!item.loop;
+  }
 }
 
 function createOrUpdateMedia(item) {
@@ -541,6 +551,9 @@ function createOrUpdateMedia(item) {
   if (item.offsetX === undefined) item.offsetX = 0;
   if (item.offsetY === undefined) item.offsetY = 0;
   if (item.z === undefined) item.z = 0;
+  if (item.hidden === undefined) item.hidden = false;
+  if (item.loop === undefined) item.loop = false;
+  if (item.volume === undefined) item.volume = 100;
   mediaItemsLocal[item.id] = item;
 
   let el = document.getElementById('cm-' + item.id);
@@ -560,6 +573,10 @@ function createOrUpdateMedia(item) {
 
     if (item.type === 'image') {
       inner.innerHTML = '<img src="' + item.url + '" draggable="false">';
+    } else if (item.type === 'video') {
+      inner.innerHTML = '<video id="vid-' + item.id + '" autoplay muted playsinline' +
+        (item.loop ? ' loop' : '') + ' style="width:100%;height:100%;object-fit:cover;">' +
+        '<source src="' + item.url + '"></video>';
     } else if (item.type === 'text') {
       const textDiv = document.createElement('div');
       textDiv.className = 'text-content';
@@ -604,6 +621,17 @@ function createOrUpdateMedia(item) {
       sendUpdate(item);
     };
 
+    const hideBtn = document.createElement('button');
+    hideBtn.className = 'item-btn'; hideBtn.title = 'Скрыть/показать';
+    hideBtn.textContent = item.hidden ? '🙈' : '👁';
+    hideBtn.onclick = (ev) => {
+      ev.stopPropagation();
+      item.hidden = !item.hidden;
+      hideBtn.textContent = item.hidden ? '🙈' : '👁';
+      applyPosition(el, item);
+      sendUpdate(item);
+    };
+
     const removeBtn = document.createElement('button');
     removeBtn.className = 'item-btn remove'; removeBtn.title = 'Удалить'; removeBtn.textContent = '✕';
     removeBtn.onclick = (ev) => {
@@ -614,6 +642,7 @@ function createOrUpdateMedia(item) {
 
     controls.appendChild(fullBtn);
     controls.appendChild(returnBtn);
+    controls.appendChild(hideBtn);
     controls.appendChild(removeBtn);
     el.appendChild(controls);
 
@@ -630,6 +659,20 @@ function createOrUpdateMedia(item) {
       applyCropTransform(el, item);
       sendUpdate(item);
     });
+
+    if (item.type === 'video') {
+      const videoEl = document.getElementById('vid-' + item.id);
+      if (videoEl) {
+        videoEl.volume = 0; // локальный звук на сайте по умолчанию выключен
+        videoEl.addEventListener('ended', () => {
+          if (!videoEl.loop) {
+            item.hidden = true;
+            applyPosition(el, item);
+            sendUpdate(item);
+          }
+        });
+      }
+    }
 
     mediaLayer.appendChild(el);
     addMediaToList(item);
@@ -772,8 +815,18 @@ socket.on('update-media', (data) => {
   if (data.offsetY !== undefined) item.offsetY = data.offsetY;
   if (data.fontScale !== undefined) item.fontScale = data.fontScale;
   if (data.color !== undefined) item.color = data.color;
+  if (data.hidden !== undefined) item.hidden = data.hidden;
+  if (data.loop !== undefined) item.loop = data.loop;
+  if (data.volume !== undefined) item.volume = data.volume;
   const el = document.getElementById('cm-' + data.id);
-  if (el) { applyPosition(el, item); applyCropTransform(el, item); }
+  if (el) {
+    applyPosition(el, item);
+    applyCropTransform(el, item);
+    const obsSlider = document.getElementById('obsvol-' + data.id);
+    if (obsSlider && data.volume !== undefined) obsSlider.value = data.volume;
+    const hideBtnEl = el.querySelector('.item-btn:nth-child(3)');
+    if (hideBtnEl) hideBtnEl.textContent = item.hidden ? '🙈' : '👁';
+  }
 });
 socket.on('update-media-batch', (updates) => {
   updates.forEach((data) => {
@@ -801,13 +854,19 @@ socket.on('clear-media', () => {
   for (const k in mediaItemsLocal) delete mediaItemsLocal[k];
   selectedIds.clear();
 });
+socket.on('video-control', (data) => {
+  const videoEl = document.getElementById('vid-' + data.id);
+  if (!videoEl) return;
+  if (data.action === 'play') { videoEl.currentTime = 0; videoEl.play().catch(() => {}); }
+  else if (data.action === 'pause') { videoEl.pause(); }
+});
 socket.on('rename-media', (data) => {
   const item = mediaItemsLocal[data.id];
   if (!item) return;
   item.label = data.label;
   const labelSpan = document.getElementById('label-' + data.id);
   if (labelSpan) {
-    const typeLabel = item.type === 'image' ? 'Картинка' : item.type === 'youtube' ? 'YouTube' : item.type === 'text' ? 'Текст' : 'OBS Ninja';
+    const typeLabel = item.type === 'image' ? 'Картинка' : item.type === 'video' ? 'Видео' : item.type === 'youtube' ? 'YouTube' : item.type === 'text' ? 'Текст' : 'OBS Ninja';
     const shortUrl = item.type === 'text'
       ? '"' + item.text.slice(0, 25) + '"'
       : (item.url.startsWith('data:') ? '(загружено с компьютера)' : item.url.slice(0, 30));
@@ -850,8 +909,10 @@ document.getElementById('media-file').addEventListener('change', (e) => {
   if (!authed) return alert('Сначала дождись подключения (правильный пароль)');
   const file = e.target.files[0];
   if (!file) return;
-  if (file.size > 12 * 1024 * 1024) {
-    alert('Файл слишком большой (максимум ~12 МБ). Возьми файл поменьше.');
+  const isVideo = file.type.startsWith('video/');
+  const maxSize = isVideo ? 20 * 1024 * 1024 : 12 * 1024 * 1024;
+  if (file.size > maxSize) {
+    alert('Файл слишком большой (максимум ~' + (maxSize / 1024 / 1024) + ' МБ). Возьми файл поменьше.');
     e.target.value = '';
     return;
   }
@@ -859,7 +920,11 @@ document.getElementById('media-file').addEventListener('change', (e) => {
   reader.onload = () => {
     const id = 'id' + Date.now();
     const spawn = getSpawnPosition();
-    const item = { id, type: 'image', url: reader.result, x: spawn.x, y: spawn.y, w: 0.4, h: 0.4, z: 9999 };
+    const item = {
+      id, type: isVideo ? 'video' : 'image', url: reader.result,
+      x: spawn.x, y: spawn.y, w: 0.4, h: 0.4, z: 9999,
+      hidden: false, loop: false, volume: 100
+    };
     socket.emit('add-media', item);
     createOrUpdateMedia(item);
     sortMediaList();
@@ -938,7 +1003,7 @@ function addMediaToList(item) {
   dragHandle.textContent = '⠿';
   li.appendChild(dragHandle);
 
-  const typeLabel = item.type === 'image' ? 'Картинка' : item.type === 'youtube' ? 'YouTube' : item.type === 'text' ? 'Текст' : 'OBS Ninja';
+  const typeLabel = item.type === 'image' ? 'Картинка' : item.type === 'video' ? 'Видео' : item.type === 'youtube' ? 'YouTube' : item.type === 'text' ? 'Текст' : 'OBS Ninja';
   const shortUrl = item.type === 'text'
     ? '"' + item.text.slice(0, 25) + '"'
     : (item.url.startsWith('data:') ? '(загружено с компьютера)' : item.url.slice(0, 30));
@@ -1029,6 +1094,79 @@ function addMediaToList(item) {
     ytControls.appendChild(volLabel);
     ytControls.appendChild(volInput);
     li.appendChild(ytControls);
+  }
+
+  if (item.type === 'video') {
+    const vControls = document.createElement('div');
+    vControls.style.display = 'flex'; vControls.style.gap = '6px'; vControls.style.alignItems = 'center'; vControls.style.flexWrap = 'wrap';
+
+    const playBtn = document.createElement('button');
+    playBtn.textContent = '▶'; playBtn.className = 'secondary'; playBtn.title = 'Запустить сначала';
+    playBtn.onclick = () => {
+      item.hidden = false;
+      sendUpdate(item);
+      socket.emit('video-control', { id: item.id, action: 'play' });
+      const localVid = document.getElementById('vid-' + item.id);
+      if (localVid) { localVid.currentTime = 0; localVid.play().catch(() => {}); }
+      const cEl = document.getElementById('cm-' + item.id);
+      if (cEl) applyPosition(cEl, item);
+    };
+
+    const pauseBtn = document.createElement('button');
+    pauseBtn.textContent = '⏸'; pauseBtn.className = 'secondary'; pauseBtn.title = 'Пауза';
+    pauseBtn.onclick = () => {
+      socket.emit('video-control', { id: item.id, action: 'pause' });
+      const localVid = document.getElementById('vid-' + item.id);
+      if (localVid) localVid.pause();
+    };
+
+    const loopLabel = document.createElement('label');
+    loopLabel.style.display = 'flex'; loopLabel.style.alignItems = 'center'; loopLabel.style.gap = '3px'; loopLabel.style.fontSize = '12px';
+    const loopCheckbox = document.createElement('input');
+    loopCheckbox.type = 'checkbox'; loopCheckbox.checked = !!item.loop;
+    loopCheckbox.onchange = () => {
+      item.loop = loopCheckbox.checked;
+      const localVid = document.getElementById('vid-' + item.id);
+      if (localVid) localVid.loop = item.loop;
+      sendUpdate(item);
+    };
+    loopLabel.appendChild(loopCheckbox);
+    loopLabel.appendChild(document.createTextNode('Зациклить'));
+
+    const obsVolLabel = document.createElement('span');
+    obsVolLabel.textContent = '🔊 OBS:'; obsVolLabel.style.fontSize = '12px';
+    const obsVolInput = document.createElement('input');
+    obsVolInput.id = 'obsvol-' + item.id;
+    obsVolInput.type = 'range'; obsVolInput.min = 0; obsVolInput.max = 100; obsVolInput.value = item.volume;
+    obsVolInput.style.width = '70px';
+    obsVolInput.title = 'Громкость в OBS (на стриме)';
+    obsVolInput.oninput = () => {
+      item.volume = parseInt(obsVolInput.value, 10);
+      sendUpdate(item);
+    };
+
+    const siteVolLabel = document.createElement('span');
+    siteVolLabel.textContent = '🎧 Сайт:'; siteVolLabel.style.fontSize = '12px';
+    const siteVolInput = document.createElement('input');
+    siteVolInput.type = 'range'; siteVolInput.min = 0; siteVolInput.max = 100; siteVolInput.value = 0;
+    siteVolInput.style.width = '70px';
+    siteVolInput.title = 'Громкость только у тебя на сайте (не влияет на стрим)';
+    siteVolInput.oninput = () => {
+      const localVid = document.getElementById('vid-' + item.id);
+      if (localVid) {
+        localVid.muted = false;
+        localVid.volume = parseInt(siteVolInput.value, 10) / 100;
+      }
+    };
+
+    vControls.appendChild(playBtn);
+    vControls.appendChild(pauseBtn);
+    vControls.appendChild(loopLabel);
+    vControls.appendChild(obsVolLabel);
+    vControls.appendChild(obsVolInput);
+    vControls.appendChild(siteVolLabel);
+    vControls.appendChild(siteVolInput);
+    li.appendChild(vControls);
   }
 
   const btn = document.createElement('button');
@@ -1163,7 +1301,7 @@ function renderFoldersList() {
         subLi.style.marginBottom = '4px';
         subLi.style.borderRadius = '5px';
 
-        const typeLabel = it.type === 'image' ? 'Картинка' : it.type === 'youtube' ? 'YouTube' : it.type === 'text' ? 'Текст' : 'OBS Ninja';
+        const typeLabel = it.type === 'image' ? 'Картинка' : it.type === 'video' ? 'Видео' : it.type === 'youtube' ? 'YouTube' : it.type === 'text' ? 'Текст' : 'OBS Ninja';
         const subLabel = document.createElement('span');
         subLabel.textContent = it.label ? it.label : typeLabel;
         subLabel.style.fontSize = '13px';
