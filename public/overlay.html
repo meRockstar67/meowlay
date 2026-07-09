@@ -165,17 +165,7 @@ function applyPosition(el, item) {
 function applyHiddenState(el, item) {
   el.style.display = item.hidden ? 'none' : '';
   el.style.opacity = (item.opacity !== undefined ? item.opacity : 100) / 100;
-  if (item.type === 'video') {
-    const v = document.getElementById('vid-' + item.id);
-    if (v) {
-      if (item.hidden) {
-        v.pause();
-      } else {
-        v.currentTime = 0;
-        v.play().catch(() => {});
-      }
-    }
-  } else if (item.type === 'youtube') {
+  if (item.type === 'youtube') {
     const iframe = document.getElementById('yt-' + item.id);
     if (iframe && iframe.contentWindow) {
       const func = item.hidden ? 'pauseVideo' : 'playVideo';
@@ -275,11 +265,12 @@ function createOrUpdateMedia(item) {
           videoEl.volume = (item.volume !== undefined ? item.volume : 100) / 100;
         }, 300);
 
-        // Если видео не зациклено — по окончании скрываем объект целиком
+        // Если видео не зациклено — по окончании делаем прозрачным (0%),
+        // само видео при этом продолжает "стоять" на последнем кадре в фоне
         videoEl.addEventListener('ended', () => {
           if (!videoEl.loop) {
-            item.hidden = true;
-            applyHiddenState(el, item);
+            item.opacity = 0;
+            applyPosition(el, item);
           }
         });
       }
@@ -357,13 +348,15 @@ socket.on('youtube-control', (data) => {
 socket.on('video-control', (data) => {
   const videoEl = document.getElementById('vid-' + data.id);
   if (!videoEl) return;
-  if (data.action === 'play') {
+  if (data.action === 'restart') {
     const cached = mediaCache[data.id];
-    if (cached) { cached.hidden = false; applyHiddenState(document.getElementById('m-' + data.id), cached); }
+    if (cached) { cached.opacity = 100; applyPosition(document.getElementById('m-' + data.id), cached); }
     videoEl.currentTime = 0;
     videoEl.play().catch(() => {});
   } else if (data.action === 'pause') {
     videoEl.pause();
+  } else if (data.action === 'resume') {
+    videoEl.play().catch(() => {});
   }
 });
 </script>
