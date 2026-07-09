@@ -91,8 +91,11 @@
     таскать/удалять их вместе (Delete — удалить выделенное). Alt+перетаскивание
     по объекту — обрезка/сдвиг картинки внутри рамки, Alt+перетаскивание за
     уголок — приближение. Двойной клик по объекту сбрасывает обрезку. Ctrl+Z
-    отменяет последнее действие. В списке "Активные медиа" ниже можно тянуть
-    строки мышкой, чтобы менять, что поверх чего отображается (слои).
+    отменяет последнее действие. Текст можно увеличить, потянув за синий
+    квадратик (растёт вместе с рамкой), либо ползунком "Размер" в списке
+    активных медиа. В списке "Активные медиа" ниже можно тянуть строки
+    мышкой, чтобы менять, что поверх чего отображается (слои), а также
+    перетаскивать их прямо на папку в разделе "Папки".
   </div>
 
   <h3>Добавить медиа</h3>
@@ -315,10 +318,9 @@ function startAction(e) {
     const pos = getPos(e);
     const text = prompt('Введите текст:');
     if (text) {
-      const fontSize = Math.max(12, parseInt(sizeInput.value, 10) * 4);
       const item = {
         id: 'id' + Date.now() + Math.random().toString(36).slice(2),
-        type: 'text', text, color: colorInput.value, fontSize,
+        type: 'text', text, color: colorInput.value, fontScale: 0.6,
         x: pos.x, y: pos.y, w: 0.3, h: 0.12, z: 9999
       };
       socket.emit('add-media', item);
@@ -445,15 +447,14 @@ function sendUpdate(item) {
   socket.emit('update-media', {
     id: item.id, x: item.x, y: item.y, w: item.w, h: item.h,
     zoom: item.zoom || 1, offsetX: item.offsetX || 0, offsetY: item.offsetY || 0,
-    fontSize: item.fontSize, color: item.color
+    fontScale: item.fontScale, color: item.color
   });
 }
 
 function updateTextStyle(el, item) {
+  applyPosition(el, item);
   const textDiv = el.querySelector('.text-content');
-  if (!textDiv) return;
-  textDiv.style.fontSize = (item.fontSize || 32) + 'px';
-  textDiv.style.color = item.color;
+  if (textDiv && item.color) textDiv.style.color = item.color;
 }
 
 function applyCropTransform(el, item) {
@@ -470,10 +471,21 @@ function applyPosition(el, item) {
   el.style.top = (item.y * 100) + '%';
   el.style.width = (item.w * 100) + '%';
   el.style.height = (item.h * 100) + '%';
+  if (item.type === 'text') {
+    const textDiv = el.querySelector('.text-content');
+    if (textDiv) {
+      // Текст масштабируется вместе с размером рамки (тянешь синий квадратик — текст растёт),
+      // плюс дополнительный множитель fontScale из ползунка в списке "Активные медиа"
+      const fontPx = Math.max(8, item.h * canvas.height * (item.fontScale || 0.6));
+      textDiv.style.fontSize = fontPx + 'px';
+      if (item.color) textDiv.style.color = item.color;
+    }
+  }
 }
 
 function createOrUpdateMedia(item) {
   if (item.zoom === undefined) item.zoom = 1;
+  if (item.fontScale === undefined) item.fontScale = 0.6;
   if (item.offsetX === undefined) item.offsetX = 0;
   if (item.offsetY === undefined) item.offsetY = 0;
   if (item.z === undefined) item.z = 0;
@@ -506,10 +518,10 @@ function createOrUpdateMedia(item) {
       textDiv.style.alignItems = 'center';
       textDiv.style.justifyContent = 'center';
       textDiv.style.color = item.color;
-      textDiv.style.fontSize = (item.fontSize || 32) + 'px';
       textDiv.style.fontWeight = 'bold';
       textDiv.style.fontFamily = 'sans-serif';
       textDiv.style.whiteSpace = 'nowrap';
+      textDiv.style.userSelect = 'none';
       inner.appendChild(textDiv);
     } else if (item.type === 'youtube') {
       inner.innerHTML = '<iframe src="https://www.youtube.com/embed/' + item.videoId + '"></iframe>';
@@ -694,10 +706,10 @@ socket.on('update-media', (data) => {
   if (data.zoom !== undefined) item.zoom = data.zoom;
   if (data.offsetX !== undefined) item.offsetX = data.offsetX;
   if (data.offsetY !== undefined) item.offsetY = data.offsetY;
-  if (data.fontSize !== undefined) item.fontSize = data.fontSize;
+  if (data.fontScale !== undefined) item.fontScale = data.fontScale;
   if (data.color !== undefined) item.color = data.color;
   const el = document.getElementById('cm-' + data.id);
-  if (el) { applyPosition(el, item); applyCropTransform(el, item); updateTextStyle(el, item); }
+  if (el) { applyPosition(el, item); applyCropTransform(el, item); }
 });
 socket.on('update-media-batch', (updates) => {
   updates.forEach((data) => {
@@ -866,12 +878,14 @@ function addMediaToList(item) {
     sizeLabel.textContent = 'Размер:'; sizeLabel.style.fontSize = '12px';
 
     const fsInput = document.createElement('input');
-    fsInput.type = 'range'; fsInput.min = 10; fsInput.max = 150; fsInput.value = item.fontSize || 32;
+    fsInput.type = 'range'; fsInput.min = 10; fsInput.max = 200; fsInput.step = 5;
+    fsInput.value = Math.round((item.fontScale || 0.6) * 100);
     fsInput.style.width = '80px';
+    fsInput.title = 'Размер текста относительно рамки (тяни синий квадратик, чтобы менять и саму рамку)';
     fsInput.oninput = () => {
-      item.fontSize = parseInt(fsInput.value, 10);
+      item.fontScale = parseInt(fsInput.value, 10) / 100;
       const el = document.getElementById('cm-' + item.id);
-      if (el) updateTextStyle(el, item);
+      if (el) applyPosition(el, item);
       sendUpdate(item);
     };
 

@@ -142,6 +142,14 @@ function applyPosition(el, item) {
   el.style.top = (item.y * 100) + '%';
   el.style.width = (item.w * 100) + '%';
   el.style.height = (item.h * 100) + '%';
+  if (item.type === 'text') {
+    const textDiv = el.querySelector('.text-content');
+    if (textDiv) {
+      const fontPx = Math.max(8, item.h * canvas.height * (item.fontScale || 0.6));
+      textDiv.style.fontSize = fontPx + 'px';
+      if (item.color) textDiv.style.color = item.color;
+    }
+  }
 }
 
 function applyCropTransform(el, item) {
@@ -185,10 +193,10 @@ function createOrUpdateMedia(item) {
       textDiv.style.alignItems = 'center';
       textDiv.style.justifyContent = 'center';
       textDiv.style.color = item.color;
-      textDiv.style.fontSize = (item.fontSize || 32) + 'px';
       textDiv.style.fontWeight = 'bold';
       textDiv.style.fontFamily = 'sans-serif';
       textDiv.style.whiteSpace = 'nowrap';
+      textDiv.style.userSelect = 'none';
       inner.appendChild(textDiv);
     } else if (item.type === 'youtube') {
       const origin = encodeURIComponent(location.origin);
@@ -218,20 +226,13 @@ function updateMediaPosition(data) {
     if (data.zoom !== undefined) cached.zoom = data.zoom;
     if (data.offsetX !== undefined) cached.offsetX = data.offsetX;
     if (data.offsetY !== undefined) cached.offsetY = data.offsetY;
-    if (data.fontSize !== undefined) cached.fontSize = data.fontSize;
+    if (data.fontScale !== undefined) cached.fontScale = data.fontScale;
     if (data.color !== undefined) cached.color = data.color;
   }
   const el = document.getElementById('m-' + data.id);
   if (el) {
-    applyPosition(el, data);
+    applyPosition(el, cached || data);
     applyCropTransform(el, cached || data);
-    if (cached && cached.type === 'text') {
-      const textDiv = el.querySelector('.text-content');
-      if (textDiv) {
-        textDiv.style.fontSize = (cached.fontSize || 32) + 'px';
-        textDiv.style.color = cached.color;
-      }
-    }
   }
 }
 
