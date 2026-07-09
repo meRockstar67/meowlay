@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Overlay</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+  }
+  #canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+  #media-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .media-item {
+    position: absolute;
+  }
+  .media-item img,
+  .media-item iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+  }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<div id="media-layer"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+const socket = io();
+
+socket.on('connect', () => {
+  socket.emit('overlay-join');
+});
+
+socket.on('state', (state) => {
+  Object.values(state.media).forEach(renderMedia);
+});
+
+socket.on('draw', (d) => {
+  ctx.globalCompositeOperation = d.erase ? 'destination-out' : 'source-over';
+  ctx.strokeStyle = d.color;
+  ctx.lineWidth = d.size;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(d.x0 * canvas.width, d.y0 * canvas.height);
+  ctx.lineTo(d.x1 * canvas.width, d.y1 * canvas.height);
+  ctx.stroke();
+});
+
+socket.on('clear-canvas', () => {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+});
+
+const mediaLayer = document.getElementById('media-layer');
+
+function renderMedia(item) {
+  let el = document.getElementById('m-' + item.id);
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'media-item';
+    el.id = 'm-' + item.id;
+    mediaLayer.appendChild(el);
+  }
+  el.style.left = (item.x * 100) + '%';
+  el.style.top = (item.y * 100) + '%';
+  el.style.width = (item.w * 100) + '%';
+  el.style.height = (item.h * 100) + '%';
+
+  if (item.type === 'image') {
+    el.innerHTML = '<img src="' + item.url + '">';
+  } else if (item.type === 'youtube') {
+    el.innerHTML = '<iframe src="https://www.youtube.com/embed/' + item.videoId +
+      '?autoplay=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>';
+  } else if (item.type === 'ninja') {
+    el.innerHTML = '<iframe src="' + item.url + '" allow="camera; microphone; autoplay"></iframe>';
+  }
+}
+
+socket.on('add-media', renderMedia);
+
+socket.on('remove-media', (id) => {
+  const el = document.getElementById('m-' + id);
+  if (el) el.remove();
+});
+
+socket.on('clear-media', () => {
+  mediaLayer.innerHTML = '';
+});
+</script>
+</body>
+</html>

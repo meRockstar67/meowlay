@@ -1,0 +1,14 @@
+{
+  "name": "meowh0cki-overlay",
+  "version": "1.0.0",
+  "description": "Overlay-canvas for stream moderators: draw, post images/gifs, YouTube, OBS Ninja",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5",
+    "dotenv": "^16.4.5"
+  }
+}

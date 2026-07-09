@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Панель модератора — meowh0cki overlay</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body {
+    font-family: sans-serif;
+    background: #1e1e2e;
+    color: #eee;
+    margin: 0;
+    padding: 16px;
+  }
+  h2, h3 { margin: 8px 0; }
+  #canvas-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 960px;
+    aspect-ratio: 16 / 9;
+    background-color: #333;
+    background-image:
+      linear-gradient(45deg, #444 25%, transparent 25%),
+      linear-gradient(-45deg, #444 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #444 75%),
+      linear-gradient(-45deg, transparent 75%, #444 75%);
+    background-size: 20px 20px;
+    border: 2px solid #555;
+    margin-bottom: 12px;
+  }
+  #canvas {
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+    cursor: crosshair;
+  }
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  button {
+    background: #5865f2;
+    color: #fff;
+    border: 0;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  button.secondary { background: #444; }
+  input, select {
+    padding: 6px;
+    border-radius: 6px;
+    border: 1px solid #555;
+    background: #2a2a3a;
+    color: #eee;
+  }
+  .media-form {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  #media-list { list-style: none; padding: 0; }
+  #media-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #2a2a3a;
+    padding: 6px 10px;
+    margin-bottom: 4px;
+    border-radius: 6px;
+  }
+  #status { margin-bottom: 12px; font-weight: bold; }
+</style>
+</head>
+<body>
+<h2>🎨 Панель модератора</h2>
+<div id="status">Подключение...</div>
+
+<div class="toolbar">
+  <label>Цвет: <input type="color" id="color" value="#ff0000"></label>
+  <label>Толщина: <input type="range" id="size" min="1" max="40" value="4"></label>
+  <button id="eraser-btn" class="secondary">Ластик</button>
+  <button id="clear-canvas-btn" class="secondary">Очистить рисунок</button>
+</div>
+
+<div id="canvas-wrap">
+  <canvas id="canvas"></canvas>
+</div>
+
+<h3>Добавить медиа</h3>
+<div class="media-form">
+  <select id="media-type">
+    <option value="image">Картинка / GIF (ссылка)</option>
+    <option value="youtube">YouTube (ссылка)</option>
+    <option value="ninja">OBS Ninja (ссылка)</option>
+  </select>
+  <input type="text" id="media-url" placeholder="Вставь ссылку" style="flex:1; min-width:200px;">
+  <button id="add-media-btn">Добавить</button>
+  <button id="clear-media-btn" class="secondary">Убрать всё медиа</button>
+</div>
+
+<h3>Активные медиа</h3>
+<ul id="media-list"></ul>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+const statusEl = document.getElementById('status');
+
+let authed = false;
+const password = prompt('Введи пароль модератора:');
+socket.on('connect', () => socket.emit('auth', password));
+socket.on('auth-result', (ok) => {
+  if (ok) {
+    authed = true;
+    statusEl.textContent = '✅ Подключено';
+  } else {
+    statusEl.textContent = '❌ Неверный пароль. Обнови страницу и попробуй снова.';
+  }
+});
+
+socket.on('state', (state) => {
+  Object.values(state.media).forEach(addMediaToList);
+});
+
+// --- Рисование ---
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = rect.height;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+let drawing = false;
+let lastPos = null;
+let erasing = false;
+
+document.getElementById('eraser-btn').addEventListener('click', () => {
+  erasing = !erasing;
+  document.getElementById('eraser-btn').textContent = erasing ? 'Ластик (вкл)' : 'Ластик';
+});
+
+document.getElementById('clear-canvas-btn').addEventListener('click', () => {
+  socket.emit('clear-canvas');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+});
+
+function getPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  return {
+    x: (clientX - rect.left) / rect.width,
+    y: (clientY - rect.top) / rect.height
+  };
+}
+
+function startDraw(e) {
+  drawing = true;
+  lastPos = getPos(e);
+}
+function endDraw() {
+  drawing = false;
+  lastPos = null;
+}
+function moveDraw(e) {
+  if (!drawing || !authed) return;
+  e.preventDefault();
+  const pos = getPos(e);
+  const color = document.getElementById('color').value;
+  const size = parseInt(document.getElementById('size').value, 10);
+
+  drawLocal(lastPos, pos, color, size, erasing);
+
+  socket.emit('draw', {
+    x0: lastPos.x, y0: lastPos.y,
+    x1: pos.x, y1: pos.y,
+    color, size, erase: erasing
+  });
+
+  lastPos = pos;
+}
+
+function drawLocal(p0, p1, color, size, erase) {
+  ctx.globalCompositeOperation = erase ? 'destination-out' : 'source-over';
+  ctx.strokeStyle = color;
+  ctx.lineWidth = size;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(p0.x * canvas.width, p0.y * canvas.height);
+  ctx.lineTo(p1.x * canvas.width, p1.y * canvas.height);
+  ctx.stroke();
+}
+
+canvas.addEventListener('mousedown', startDraw);
+canvas.addEventListener('mouseup', endDraw);
+canvas.addEventListener('mouseleave', endDraw);
+canvas.addEventListener('mousemove', moveDraw);
+canvas.addEventListener('touchstart', startDraw);
+canvas.addEventListener('touchend', endDraw);
+canvas.addEventListener('touchmove', moveDraw);
+
+// --- Медиа ---
+const mediaListEl = document.getElementById('media-list');
+const mediaItemsLocal = {};
+
+function extractYoutubeId(url) {
+  const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/);
+  return m ? m[1] : null;
+}
+
+document.getElementById('add-media-btn').addEventListener('click', () => {
+  if (!authed) return alert('Сначала дождись подключения (правильный пароль)');
+  const type = document.getElementById('media-type').value;
+  const url = document.getElementById('media-url').value.trim();
+  if (!url) return;
+
+  const id = 'id' + Date.now();
+  const item = { id, type, url, x: 0.3, y: 0.3, w: 0.4, h: 0.4 };
+
+  if (type === 'youtube') {
+    const vid = extractYoutubeId(url);
+    if (!vid) return alert('Не получилось распознать ссылку на YouTube');
+    item.videoId = vid;
+  }
+
+  socket.emit('add-media', item);
+  addMediaToList(item);
+  document.getElementById('media-url').value = '';
+});
+
+document.getElementById('clear-media-btn').addEventListener('click', () => {
+  socket.emit('clear-media');
+  mediaListEl.innerHTML = '';
+});
+
+function addMediaToList(item) {
+  mediaItemsLocal[item.id] = item;
+  const li = document.createElement('li');
+  li.id = 'li-' + item.id;
+  const label = item.type === 'image' ? 'Картинка' : item.type === 'youtube' ? 'YouTube' : 'OBS Ninja';
+  li.innerHTML = '<span>' + label + ': ' + item.url.slice(0, 40) + '</span>';
+  const btn = document.createElement('button');
+  btn.textContent = 'Убрать';
+  btn.className = 'secondary';
+  btn.onclick = () => {
+    socket.emit('remove-media', item.id);
+    li.remove();
+    delete mediaItemsLocal[item.id];
+  };
+  li.appendChild(btn);
+  mediaListEl.appendChild(li);
+}
+</script>
+</body>
+</html>
