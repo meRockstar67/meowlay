@@ -212,6 +212,15 @@ io.on('connection', (socket) => {
     saveStateDebounced();
   });
 
+  socket.on('rename-folder', (data) => {
+    if (!authed) return;
+    if (folders[data.id]) {
+      folders[data.id].name = (data.name || folders[data.id].name).slice(0, 40);
+    }
+    io.emit('folders-sync', folders);
+    saveStateDebounced();
+  });
+
   socket.on('assign-folder', (data) => {
     if (!authed) return;
     removeItemFromAllFolders(data.itemId);
