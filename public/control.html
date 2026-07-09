@@ -638,6 +638,15 @@ function createOrUpdateMedia(item) {
         if (opacityVal) opacityVal.textContent = item.opacity + '%';
         const listHideBtn = document.getElementById('hidebtn-' + item.id);
         if (listHideBtn) listHideBtn.textContent = willHide ? '👁 Показать' : '🙈 Скрыть';
+
+        const localVid = document.getElementById('vid-' + item.id);
+        if (willHide) {
+          if (localVid) localVid.pause();
+          socket.emit('video-control', { id: item.id, action: 'pause' });
+        } else {
+          if (localVid) { localVid.currentTime = 0; localVid.play().catch(() => {}); }
+          socket.emit('video-control', { id: item.id, action: 'restart' });
+        }
       } else {
         item.hidden = !item.hidden;
         hideBtn.textContent = item.hidden ? '🙈' : '👁';
@@ -1215,7 +1224,7 @@ function addMediaToList(item) {
     hideShowBtn.id = 'hidebtn-' + item.id;
     hideShowBtn.className = 'secondary';
     hideShowBtn.textContent = (item.opacity === 0) ? '👁 Показать' : '🙈 Скрыть';
-    hideShowBtn.title = 'Скрыть — станет невидимым на стриме (но продолжит играть и останется в файлах). Показать — снова станет видно.';
+    hideShowBtn.title = 'Скрыть — прозрачность 0% и пауза (останется в файлах). Показать — снова видно и начнётся заново.';
     hideShowBtn.onclick = () => {
       const willHide = item.opacity !== 0;
       item.opacity = willHide ? 0 : 100;
@@ -1227,6 +1236,19 @@ function addMediaToList(item) {
       const opacityVal = document.getElementById('opacity-' + item.id + '-val');
       if (opacityVal) opacityVal.textContent = item.opacity + '%';
       sendUpdate(item);
+
+      const localVid = document.getElementById('vid-' + item.id);
+      if (willHide) {
+        // Скрываем — ставим на паузу и на сайте, и в OBS
+        if (localVid) localVid.pause();
+        socket.emit('video-control', { id: item.id, action: 'pause' });
+        pauseBtn.textContent = '▶ Продолжить';
+      } else {
+        // Показываем — запускаем заново с начала и на сайте, и в OBS
+        if (localVid) { localVid.currentTime = 0; localVid.play().catch(() => {}); }
+        socket.emit('video-control', { id: item.id, action: 'restart' });
+        pauseBtn.textContent = '⏸ Пауза';
+      }
     };
 
     const loopLabel = document.createElement('label');
