@@ -1058,12 +1058,23 @@ function renderFoldersList() {
     selectBtn.textContent = 'Выделить';
     selectBtn.onclick = () => selectMany(f.memberIds);
 
+    const renameBtn = document.createElement('button');
+    renameBtn.textContent = '✏️ Переименовать';
+    renameBtn.className = 'secondary';
+    renameBtn.onclick = () => {
+      const newName = prompt('Новое название папки:', f.name);
+      if (newName && newName.trim()) {
+        socket.emit('rename-folder', { id: f.id, name: newName.trim() });
+      }
+    };
+
     const delBtn = document.createElement('button');
     delBtn.textContent = 'Удалить папку';
     delBtn.className = 'secondary';
     delBtn.onclick = () => socket.emit('delete-folder', f.id);
 
     btns.appendChild(selectBtn);
+    btns.appendChild(renameBtn);
     btns.appendChild(delBtn);
     li.appendChild(label);
     li.appendChild(btns);
