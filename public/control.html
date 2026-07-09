@@ -1435,11 +1435,6 @@ function addMediaToList(item) {
     if (val) val.textContent = deg + '°';
   }
 
-  const rotateLeftBtn = document.createElement('button');
-  rotateLeftBtn.textContent = '⟲ -90°'; rotateLeftBtn.className = 'secondary';
-  rotateLeftBtn.title = 'Повернуть на 90° против часовой';
-  rotateLeftBtn.onclick = () => { checkpoint(); setRotation((item.rotation || 0) - 90); };
-
   const rotationControl = createPercentControl(
     'rotation-' + item.id, '🔄 Поворот', item.rotation, 15,
     'Точный поворот в градусах',
@@ -1449,10 +1444,9 @@ function addMediaToList(item) {
 
   const rotateRightBtn = document.createElement('button');
   rotateRightBtn.textContent = '⟳ +90°'; rotateRightBtn.className = 'secondary';
-  rotateRightBtn.title = 'Повернуть на 90° по часовой';
+  rotateRightBtn.title = 'Повернуть на 90°';
   rotateRightBtn.onclick = () => { checkpoint(); setRotation((item.rotation || 0) + 90); };
 
-  rotationWrap.appendChild(rotateLeftBtn);
   rotationWrap.appendChild(rotationControl);
   rotationWrap.appendChild(rotateRightBtn);
   li.appendChild(rotationWrap);
