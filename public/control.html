@@ -5,6 +5,7 @@
 <title>Панель модератора — meowh0cki overlay</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
+  * { box-sizing: border-box; }
   body {
     font-family: sans-serif;
     background: #1e1e2e;
@@ -12,33 +13,17 @@
     margin: 0;
     padding: 16px;
   }
-  h2, h3 { margin: 8px 0; }
-  #canvas-wrap {
-    position: relative;
-    width: 100%;
+  .page {
     max-width: 960px;
-    aspect-ratio: 16 / 9;
-    background-color: #333;
-    background-image:
-      linear-gradient(45deg, #444 25%, transparent 25%),
-      linear-gradient(-45deg, #444 25%, transparent 25%),
-      linear-gradient(45deg, transparent 75%, #444 75%),
-      linear-gradient(-45deg, transparent 75%, #444 75%);
-    background-size: 20px 20px;
-    border: 2px solid #555;
-    margin-bottom: 12px;
+    margin: 0 auto;
   }
-  #canvas {
-    width: 100%;
-    height: 100%;
-    touch-action: none;
-    cursor: crosshair;
-  }
+  h2, h3 { margin: 8px 0; text-align: center; }
   .toolbar {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     align-items: center;
+    justify-content: center;
     margin-bottom: 12px;
   }
   button {
@@ -62,6 +47,7 @@
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+    justify-content: center;
     margin-bottom: 12px;
   }
   #media-list { list-style: none; padding: 0; }
@@ -74,38 +60,140 @@
     margin-bottom: 4px;
     border-radius: 6px;
   }
-  #status { margin-bottom: 12px; font-weight: bold; }
+  #status { margin-bottom: 12px; font-weight: bold; text-align: center; }
+
+  /* --- Холст по центру --- */
+  #canvas-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 960px;
+    aspect-ratio: 16 / 9;
+    margin: 0 auto 12px auto;
+    background-color: #333;
+    background-image:
+      linear-gradient(45deg, #444 25%, transparent 25%),
+      linear-gradient(-45deg, #444 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #444 75%),
+      linear-gradient(-45deg, transparent 75%, #444 75%);
+    background-size: 20px 20px;
+    border: 2px solid #555;
+    overflow: hidden;
+  }
+  #canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+    cursor: crosshair;
+  }
+
+  /* --- Слой перетаскиваемых медиа поверх холста --- */
+  #media-layer {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+  .media-item {
+    position: absolute;
+    border: 2px dashed #5865f2;
+    pointer-events: auto;
+    cursor: move;
+  }
+  .media-item img,
+  .media-item iframe {
+    width: 100%;
+    height: 100%;
+    display: block;
+    border: 0;
+    pointer-events: none;
+  }
+  .media-item .item-controls {
+    position: absolute;
+    top: -14px;
+    right: -14px;
+    display: flex;
+    gap: 4px;
+  }
+  .media-item .item-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #444;
+    color: #fff;
+    border: 0;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+  }
+  .media-item .item-btn.remove { background: #e33; }
+  .resize-handle {
+    position: absolute;
+    right: -8px;
+    bottom: -8px;
+    width: 16px;
+    height: 16px;
+    background: #5865f2;
+    border-radius: 3px;
+    cursor: nwse-resize;
+    pointer-events: auto;
+  }
+  .hint {
+    text-align: center;
+    font-size: 13px;
+    color: #999;
+    margin-bottom: 12px;
+  }
 </style>
 </head>
 <body>
-<h2>🎨 Панель модератора</h2>
-<div id="status">Подключение...</div>
+<div class="page">
+  <h2>🎨 Панель модератора</h2>
+  <div id="status">Подключение...</div>
 
-<div class="toolbar">
-  <label>Цвет: <input type="color" id="color" value="#ff0000"></label>
-  <label>Толщина: <input type="range" id="size" min="1" max="40" value="4"></label>
-  <button id="eraser-btn" class="secondary">Ластик</button>
-  <button id="clear-canvas-btn" class="secondary">Очистить рисунок</button>
+  <div class="toolbar">
+    <label>Цвет: <input type="color" id="color" value="#ff0000"></label>
+    <label>Толщина: <input type="range" id="size" min="1" max="40" value="4"></label>
+    <button id="eraser-btn" class="secondary">Ластик</button>
+    <button id="clear-canvas-btn" class="secondary">Очистить рисунок</button>
+  </div>
+
+  <div id="canvas-wrap">
+    <canvas id="canvas"></canvas>
+    <div id="media-layer"></div>
+  </div>
+
+  <div class="hint">
+    Медиа-объекты можно таскать мышкой прямо на холсте, тянуть за синий
+    квадратик для изменения размера, кнопкой ⛶ растянуть на весь экран.
+  </div>
+
+  <h3>Добавить медиа</h3>
+  <div class="media-form">
+    <select id="media-type">
+      <option value="image">Картинка / GIF (ссылка)</option>
+      <option value="youtube">YouTube (ссылка)</option>
+      <option value="ninja">OBS Ninja (ссылка)</option>
+    </select>
+    <input type="text" id="media-url" placeholder="Вставь ссылку" style="flex:1; min-width:200px;">
+    <button id="add-media-btn">Добавить по ссылке</button>
+  </div>
+  <div class="media-form">
+    <label style="background:#5865f2; padding:8px 12px; border-radius:6px; cursor:pointer;">
+      📁 Загрузить фото/гифку с компьютера
+      <input type="file" id="media-file" accept="image/*" style="display:none;">
+    </label>
+    <button id="clear-media-btn" class="secondary">Убрать всё медиа</button>
+  </div>
+
+  <h3>Активные медиа</h3>
+  <ul id="media-list"></ul>
 </div>
-
-<div id="canvas-wrap">
-  <canvas id="canvas"></canvas>
-</div>
-
-<h3>Добавить медиа</h3>
-<div class="media-form">
-  <select id="media-type">
-    <option value="image">Картинка / GIF (ссылка)</option>
-    <option value="youtube">YouTube (ссылка)</option>
-    <option value="ninja">OBS Ninja (ссылка)</option>
-  </select>
-  <input type="text" id="media-url" placeholder="Вставь ссылку" style="flex:1; min-width:200px;">
-  <button id="add-media-btn">Добавить</button>
-  <button id="clear-media-btn" class="secondary">Убрать всё медиа</button>
-</div>
-
-<h3>Активные медиа</h3>
-<ul id="media-list"></ul>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
@@ -125,15 +213,16 @@ socket.on('auth-result', (ok) => {
 });
 
 socket.on('state', (state) => {
-  Object.values(state.media).forEach(addMediaToList);
+  Object.values(state.media).forEach(createOrUpdateMedia);
 });
 
 // --- Рисование ---
+const canvasWrap = document.getElementById('canvas-wrap');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
 function resizeCanvas() {
-  const rect = canvas.parentElement.getBoundingClientRect();
+  const rect = canvasWrap.getBoundingClientRect();
   canvas.width = rect.width;
   canvas.height = rect.height;
 }
@@ -165,6 +254,7 @@ function getPos(e) {
 }
 
 function startDraw(e) {
+  if (e.target !== canvas) return; // не рисуем, если тянем медиа-объект
   drawing = true;
   lastPos = getPos(e);
 }
@@ -201,16 +291,16 @@ function drawLocal(p0, p1, color, size, erase) {
   ctx.stroke();
 }
 
-canvas.addEventListener('mousedown', startDraw);
-canvas.addEventListener('mouseup', endDraw);
-canvas.addEventListener('mouseleave', endDraw);
-canvas.addEventListener('mousemove', moveDraw);
-canvas.addEventListener('touchstart', startDraw);
-canvas.addEventListener('touchend', endDraw);
-canvas.addEventListener('touchmove', moveDraw);
+canvasWrap.addEventListener('mousedown', startDraw);
+window.addEventListener('mouseup', endDraw);
+canvasWrap.addEventListener('mousemove', moveDraw);
+canvasWrap.addEventListener('touchstart', startDraw);
+window.addEventListener('touchend', endDraw);
+canvasWrap.addEventListener('touchmove', moveDraw);
 
-// --- Медиа ---
+// --- Медиа: список + превью на холсте с перетаскиванием ---
 const mediaListEl = document.getElementById('media-list');
+const mediaLayer = document.getElementById('media-layer');
 const mediaItemsLocal = {};
 
 function extractYoutubeId(url) {
@@ -218,6 +308,163 @@ function extractYoutubeId(url) {
   return m ? m[1] : null;
 }
 
+function sendUpdate(item) {
+  socket.emit('update-media', { id: item.id, x: item.x, y: item.y, w: item.w, h: item.h });
+}
+
+// Создаёт (если нет) или обновляет DOM-превью объекта на холсте модератора
+function createOrUpdateMedia(item) {
+  mediaItemsLocal[item.id] = item;
+
+  let el = document.getElementById('cm-' + item.id);
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'media-item';
+    el.id = 'cm-' + item.id;
+
+    const inner = document.createElement('div');
+    inner.style.width = '100%';
+    inner.style.height = '100%';
+    if (item.type === 'image') {
+      inner.innerHTML = '<img src="' + item.url + '">';
+    } else if (item.type === 'youtube') {
+      inner.innerHTML = '<iframe src="https://www.youtube.com/embed/' + item.videoId + '"></iframe>';
+    } else if (item.type === 'ninja') {
+      inner.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#0008;color:#fff;font-size:12px;text-align:center;">OBS Ninja</div>';
+    }
+    el.appendChild(inner);
+
+    const controls = document.createElement('div');
+    controls.className = 'item-controls';
+
+    const fullBtn = document.createElement('button');
+    fullBtn.className = 'item-btn';
+    fullBtn.title = 'На весь экран';
+    fullBtn.textContent = '⛶';
+    fullBtn.onclick = (ev) => {
+      ev.stopPropagation();
+      item.x = 0; item.y = 0; item.w = 1; item.h = 1;
+      applyPosition(el, item);
+      sendUpdate(item);
+    };
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'item-btn remove';
+    removeBtn.title = 'Удалить';
+    removeBtn.textContent = '✕';
+    removeBtn.onclick = (ev) => {
+      ev.stopPropagation();
+      socket.emit('remove-media', item.id);
+      removeMediaLocal(item.id);
+    };
+
+    controls.appendChild(fullBtn);
+    controls.appendChild(removeBtn);
+    el.appendChild(controls);
+
+    const handle = document.createElement('div');
+    handle.className = 'resize-handle';
+    el.appendChild(handle);
+
+    makeDraggable(el, item);
+    makeResizable(handle, el, item);
+
+    mediaLayer.appendChild(el);
+    addMediaToList(item);
+  }
+  applyPosition(el, item);
+}
+
+function applyPosition(el, item) {
+  el.style.left = (item.x * 100) + '%';
+  el.style.top = (item.y * 100) + '%';
+  el.style.width = (item.w * 100) + '%';
+  el.style.height = (item.h * 100) + '%';
+}
+
+function makeDraggable(el, item) {
+  let dragging = false;
+  let startX, startY, startItemX, startItemY;
+
+  el.addEventListener('mousedown', (e) => {
+    if (e.target.closest('.resize-handle') || e.target.closest('.item-btn')) return;
+    e.stopPropagation();
+    dragging = true;
+    const rect = canvasWrap.getBoundingClientRect();
+    startX = e.clientX;
+    startY = e.clientY;
+    startItemX = item.x;
+    startItemY = item.y;
+
+    function onMove(ev) {
+      if (!dragging) return;
+      const dx = (ev.clientX - startX) / rect.width;
+      const dy = (ev.clientY - startY) / rect.height;
+      item.x = Math.min(Math.max(startItemX + dx, -item.w + 0.02), 1 - 0.02);
+      item.y = Math.min(Math.max(startItemY + dy, -item.h + 0.02), 1 - 0.02);
+      applyPosition(el, item);
+      sendUpdate(item);
+    }
+    function onUp() {
+      dragging = false;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  });
+}
+
+function makeResizable(handle, el, item) {
+  handle.addEventListener('mousedown', (e) => {
+    e.stopPropagation();
+    const rect = canvasWrap.getBoundingClientRect();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startW = item.w;
+    const startH = item.h;
+
+    function onMove(ev) {
+      const dx = (ev.clientX - startX) / rect.width;
+      const dy = (ev.clientY - startY) / rect.height;
+      item.w = Math.max(0.05, startW + dx);
+      item.h = Math.max(0.05, startH + dy);
+      applyPosition(el, item);
+      sendUpdate(item);
+    }
+    function onUp() {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  });
+}
+
+function removeMediaLocal(id) {
+  const el = document.getElementById('cm-' + id);
+  if (el) el.remove();
+  const li = document.getElementById('li-' + id);
+  if (li) li.remove();
+  delete mediaItemsLocal[id];
+}
+
+socket.on('add-media', createOrUpdateMedia);
+socket.on('update-media', (data) => {
+  const item = mediaItemsLocal[data.id];
+  if (!item) return;
+  item.x = data.x; item.y = data.y; item.w = data.w; item.h = data.h;
+  const el = document.getElementById('cm-' + data.id);
+  if (el) applyPosition(el, item);
+});
+socket.on('remove-media', removeMediaLocal);
+socket.on('clear-media', () => {
+  mediaLayer.innerHTML = '';
+  mediaListEl.innerHTML = '';
+  for (const k in mediaItemsLocal) delete mediaItemsLocal[k];
+});
+
+// --- Добавление по ссылке ---
 document.getElementById('add-media-btn').addEventListener('click', () => {
   if (!authed) return alert('Сначала дождись подключения (правильный пароль)');
   const type = document.getElementById('media-type').value;
@@ -234,28 +481,52 @@ document.getElementById('add-media-btn').addEventListener('click', () => {
   }
 
   socket.emit('add-media', item);
-  addMediaToList(item);
+  createOrUpdateMedia(item);
   document.getElementById('media-url').value = '';
+});
+
+// --- Загрузка файла с компьютера ---
+document.getElementById('media-file').addEventListener('change', (e) => {
+  if (!authed) return alert('Сначала дождись подключения (правильный пароль)');
+  const file = e.target.files[0];
+  if (!file) return;
+
+  if (file.size > 12 * 1024 * 1024) {
+    alert('Файл слишком большой (максимум ~12 МБ). Возьми файл поменьше.');
+    e.target.value = '';
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    const id = 'id' + Date.now();
+    const item = { id, type: 'image', url: reader.result, x: 0.3, y: 0.3, w: 0.4, h: 0.4 };
+    socket.emit('add-media', item);
+    createOrUpdateMedia(item);
+    e.target.value = '';
+  };
+  reader.readAsDataURL(file);
 });
 
 document.getElementById('clear-media-btn').addEventListener('click', () => {
   socket.emit('clear-media');
+  mediaLayer.innerHTML = '';
   mediaListEl.innerHTML = '';
+  for (const k in mediaItemsLocal) delete mediaItemsLocal[k];
 });
 
 function addMediaToList(item) {
-  mediaItemsLocal[item.id] = item;
   const li = document.createElement('li');
   li.id = 'li-' + item.id;
   const label = item.type === 'image' ? 'Картинка' : item.type === 'youtube' ? 'YouTube' : 'OBS Ninja';
-  li.innerHTML = '<span>' + label + ': ' + item.url.slice(0, 40) + '</span>';
+  const shortUrl = item.url.startsWith('data:') ? '(загружено с компьютера)' : item.url.slice(0, 40);
+  li.innerHTML = '<span>' + label + ': ' + shortUrl + '</span>';
   const btn = document.createElement('button');
   btn.textContent = 'Убрать';
   btn.className = 'secondary';
   btn.onclick = () => {
     socket.emit('remove-media', item.id);
-    li.remove();
-    delete mediaItemsLocal[item.id];
+    removeMediaLocal(item.id);
   };
   li.appendChild(btn);
   mediaListEl.appendChild(li);

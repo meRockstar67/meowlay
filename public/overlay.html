@@ -56,12 +56,16 @@ window.addEventListener('resize', resize);
 
 const socket = io();
 
+// Локальный кэш полных данных объектов (чтобы не пересылать картинку
+// заново при каждом перемещении)
+const mediaCache = {};
+
 socket.on('connect', () => {
   socket.emit('overlay-join');
 });
 
 socket.on('state', (state) => {
-  Object.values(state.media).forEach(renderMedia);
+  Object.values(state.media).forEach(createOrUpdateMedia);
 });
 
 socket.on('draw', (d) => {
@@ -81,38 +85,59 @@ socket.on('clear-canvas', () => {
 
 const mediaLayer = document.getElementById('media-layer');
 
-function renderMedia(item) {
+function applyPosition(el, item) {
+  el.style.left = (item.x * 100) + '%';
+  el.style.top = (item.y * 100) + '%';
+  el.style.width = (item.w * 100) + '%';
+  el.style.height = (item.h * 100) + '%';
+}
+
+function createOrUpdateMedia(item) {
+  mediaCache[item.id] = item;
   let el = document.getElementById('m-' + item.id);
   if (!el) {
     el = document.createElement('div');
     el.className = 'media-item';
     el.id = 'm-' + item.id;
     mediaLayer.appendChild(el);
-  }
-  el.style.left = (item.x * 100) + '%';
-  el.style.top = (item.y * 100) + '%';
-  el.style.width = (item.w * 100) + '%';
-  el.style.height = (item.h * 100) + '%';
 
-  if (item.type === 'image') {
-    el.innerHTML = '<img src="' + item.url + '">';
-  } else if (item.type === 'youtube') {
-    el.innerHTML = '<iframe src="https://www.youtube.com/embed/' + item.videoId +
-      '?autoplay=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>';
-  } else if (item.type === 'ninja') {
-    el.innerHTML = '<iframe src="' + item.url + '" allow="camera; microphone; autoplay"></iframe>';
+    if (item.type === 'image') {
+      el.innerHTML = '<img src="' + item.url + '">';
+    } else if (item.type === 'youtube') {
+      el.innerHTML = '<iframe src="https://www.youtube.com/embed/' + item.videoId +
+        '?autoplay=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>';
+    } else if (item.type === 'ninja') {
+      el.innerHTML = '<iframe src="' + item.url + '" allow="camera; microphone; autoplay"></iframe>';
+    }
   }
+  applyPosition(el, item);
 }
 
-socket.on('add-media', renderMedia);
+// Быстрое обновление позиции/размера без перерисовки содержимого
+function updateMediaPosition(data) {
+  const cached = mediaCache[data.id];
+  if (cached) {
+    cached.x = data.x;
+    cached.y = data.y;
+    cached.w = data.w;
+    cached.h = data.h;
+  }
+  const el = document.getElementById('m-' + data.id);
+  if (el) applyPosition(el, data);
+}
+
+socket.on('add-media', createOrUpdateMedia);
+socket.on('update-media', updateMediaPosition);
 
 socket.on('remove-media', (id) => {
   const el = document.getElementById('m-' + id);
   if (el) el.remove();
+  delete mediaCache[id];
 });
 
 socket.on('clear-media', () => {
   mediaLayer.innerHTML = '';
+  for (const k in mediaCache) delete mediaCache[k];
 });
 </script>
 </body>
