@@ -226,7 +226,7 @@ function loadTwitchEmbed(channel) {
   const container = document.getElementById('twitch-embed');
   const parent = location.hostname || 'localhost';
   container.innerHTML = '<iframe src="https://player.twitch.tv/?channel=' + encodeURIComponent(channel) +
-    '&parent=' + encodeURIComponent(parent) + '&muted=true" allowfullscreen></iframe>';
+    '&parent=' + encodeURIComponent(parent) + '&autoplay=true&muted=true" allowfullscreen></iframe>';
   try { localStorage.setItem('meowlay-twitch-channel', channel); } catch (e) {}
 }
 
