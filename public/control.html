@@ -99,6 +99,7 @@
     <input type="text" id="twitch-channel-input" placeholder="Ник канала на Twitch (или ссылка twitch.tv/...)" style="min-width:260px;">
     <button id="connect-twitch-btn">📺 Подключить стрим для предпросмотра</button>
     <button id="disconnect-twitch-btn" class="secondary">Отключить</button>
+    <button id="twitch-interact-btn" class="secondary">🖱 Управлять стримом (play/pause/звук)</button>
   </div>
 
   <div id="canvas-wrap">
@@ -240,6 +241,31 @@ document.getElementById('connect-twitch-btn').addEventListener('click', () => {
 document.getElementById('disconnect-twitch-btn').addEventListener('click', () => {
   document.getElementById('twitch-embed').innerHTML = '';
   try { localStorage.removeItem('meowlay-twitch-channel'); } catch (e) {}
+});
+
+// Холст поверх стрима перехватывает все клики (это нужно для рисования),
+// поэтому нажать play/pause/громкость прямо в плеере Twitch не получится,
+// пока не включишь этот режим — тогда клики на секунду идут в сам плеер,
+// а не на холст
+let twitchInteractMode = false;
+document.getElementById('twitch-interact-btn').addEventListener('click', () => {
+  twitchInteractMode = !twitchInteractMode;
+  const btn = document.getElementById('twitch-interact-btn');
+  const twitchContainer = document.getElementById('twitch-embed');
+  const iframeEl = twitchContainer.querySelector('iframe');
+  if (twitchInteractMode) {
+    canvas.style.pointerEvents = 'none';
+    twitchContainer.style.pointerEvents = 'auto';
+    if (iframeEl) iframeEl.style.pointerEvents = 'auto';
+    btn.textContent = '✏️ Вернуться к рисованию';
+    btn.style.background = '#e33';
+  } else {
+    canvas.style.pointerEvents = '';
+    twitchContainer.style.pointerEvents = 'none';
+    if (iframeEl) iframeEl.style.pointerEvents = 'none';
+    btn.textContent = '🖱 Управлять стримом (play/pause/звук)';
+    btn.style.background = '';
+  }
 });
 
 // Если модератор уже подключал канал раньше — подставим его автоматически
