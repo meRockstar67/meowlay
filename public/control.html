@@ -141,8 +141,8 @@
   </div>
   <div class="media-form">
     <label style="background:#5865f2; padding:8px 12px; border-radius:6px; cursor:pointer;">
-      📁 Загрузить фото/гифку/видео с компьютера
-      <input type="file" id="media-file" accept="image/*,video/*" style="display:none;">
+      📁 Загрузить фото/гифку/видео с компьютера (можно сразу несколько)
+      <input type="file" id="media-file" accept="image/*,video/*" multiple style="display:none;">
     </label>
     <button id="clear-media-btn" class="secondary">Убрать всё медиа</button>
   </div>
@@ -506,6 +506,36 @@ canvasWrap.addEventListener('touchmove', moveAction);
 
 function clamp(v, min, max) { return Math.min(Math.max(v, min), max); }
 
+// Единая функция скрытия/показа — одинаково для фото, видео, текста и т.д.
+// Для видео дополнительно принудительно глушит звук, пока скрыто (даже если
+// ползунок громкости не на нуле), и возвращает звук при показе.
+function toggleHidden(item) {
+  checkpoint();
+  item.hidden = !item.hidden;
+  const el = document.getElementById('cm-' + item.id);
+  if (el) applyPosition(el, item);
+
+  if (item.type === 'video') {
+    const localVid = document.getElementById('vid-' + item.id);
+    if (localVid) {
+      if (item.hidden) {
+        localVid.muted = true;
+      } else {
+        localVid.muted = false;
+        const siteSlider = document.getElementById('sitevol-' + item.id);
+        localVid.volume = siteSlider ? parseInt(siteSlider.value, 10) / 100 : 0;
+      }
+    }
+  }
+
+  sendUpdate(item);
+
+  const canvasHideBtn = el ? el.querySelector('.item-btn:nth-child(3)') : null;
+  if (canvasHideBtn) canvasHideBtn.textContent = item.hidden ? '🙈' : '👁';
+  const listHideBtn = document.getElementById('hidebtn-' + item.id);
+  if (listHideBtn) listHideBtn.textContent = item.hidden ? '👁 Показать' : '🙈 Скрыть';
+}
+
 // --- Медиа ---
 const mediaListEl = document.getElementById('media-list');
 const mediaLayer = document.getElementById('media-layer');
@@ -607,7 +637,10 @@ function applyPosition(el, item) {
   }
   if (item.type === 'video') {
     const videoEl = document.getElementById('vid-' + item.id);
-    if (videoEl) videoEl.loop = !!item.loop;
+    if (videoEl) {
+      videoEl.loop = !!item.loop;
+      videoEl.muted = !!item.hidden;
+    }
   }
 }
 
@@ -694,36 +727,10 @@ function createOrUpdateMedia(item) {
 
     const hideBtn = document.createElement('button');
     hideBtn.className = 'item-btn'; hideBtn.title = 'Скрыть/показать';
-    hideBtn.textContent = (item.type === 'video' ? item.opacity === 0 : item.hidden) ? '🙈' : '👁';
+    hideBtn.textContent = item.hidden ? '🙈' : '👁';
     hideBtn.onclick = (ev) => {
       ev.stopPropagation();
-      checkpoint();
-      if (item.type === 'video') {
-        const willHide = item.opacity !== 0;
-        item.opacity = willHide ? 0 : 100;
-        hideBtn.textContent = willHide ? '🙈' : '👁';
-        applyPosition(el, item);
-        const opacitySlider = document.getElementById('opacity-' + item.id);
-        if (opacitySlider) opacitySlider.value = item.opacity;
-        const opacityVal = document.getElementById('opacity-' + item.id + '-val');
-        if (opacityVal) opacityVal.textContent = item.opacity + '%';
-        const listHideBtn = document.getElementById('hidebtn-' + item.id);
-        if (listHideBtn) listHideBtn.textContent = willHide ? '👁 Показать' : '🙈 Скрыть';
-
-        const localVid = document.getElementById('vid-' + item.id);
-        if (willHide) {
-          if (localVid) localVid.pause();
-          socket.emit('video-control', { id: item.id, action: 'pause' });
-        } else {
-          if (localVid) { localVid.currentTime = 0; localVid.play().catch(() => {}); }
-          socket.emit('video-control', { id: item.id, action: 'restart' });
-        }
-      } else {
-        item.hidden = !item.hidden;
-        hideBtn.textContent = item.hidden ? '🙈' : '👁';
-        applyPosition(el, item);
-      }
-      sendUpdate(item);
+      toggleHidden(item);
     };
 
     const removeBtn = document.createElement('button');
@@ -768,16 +775,8 @@ function createOrUpdateMedia(item) {
         // Звук на сайте по умолчанию выключен (0%) — видео просто играет
         // молча, пока сам не поднимешь ползунок "Сайт"
         videoEl.addEventListener('ended', () => {
-          if (!videoEl.loop) {
-            item.opacity = 0;
-            applyPosition(el, item);
-            const opacitySlider = document.getElementById('opacity-' + item.id);
-            if (opacitySlider) opacitySlider.value = 0;
-            const opacityVal = document.getElementById('opacity-' + item.id + '-val');
-            if (opacityVal) opacityVal.textContent = '0%';
-            const listHideShowBtn = document.getElementById('hidebtn-' + item.id);
-            if (listHideShowBtn) listHideShowBtn.textContent = '👁 Показать';
-            sendUpdate(item);
+          if (!videoEl.loop && !item.hidden) {
+            toggleHidden(item);
           }
         });
       }
@@ -984,10 +983,21 @@ socket.on('update-media', (data) => {
     const rotationVal = document.getElementById('rotation-' + data.id + '-val');
     if (rotationVal && data.rotation !== undefined) rotationVal.textContent = data.rotation + '°';
     const hideBtnEl = el.querySelector('.item-btn:nth-child(3)');
-    const isHiddenNow = item.type === 'video' ? item.opacity === 0 : item.hidden;
-    if (hideBtnEl) hideBtnEl.textContent = isHiddenNow ? '🙈' : '👁';
+    if (hideBtnEl) hideBtnEl.textContent = item.hidden ? '🙈' : '👁';
     const listHideShowBtn = document.getElementById('hidebtn-' + data.id);
-    if (listHideShowBtn) listHideShowBtn.textContent = isHiddenNow ? '👁 Показать' : '🙈 Скрыть';
+    if (listHideShowBtn) listHideShowBtn.textContent = item.hidden ? '👁 Показать' : '🙈 Скрыть';
+    if (item.type === 'video' && data.hidden !== undefined) {
+      const localVid = document.getElementById('vid-' + data.id);
+      if (localVid) {
+        if (item.hidden) {
+          localVid.muted = true;
+        } else {
+          localVid.muted = false;
+          const siteSlider = document.getElementById('sitevol-' + data.id);
+          localVid.volume = siteSlider ? parseInt(siteSlider.value, 10) / 100 : 0;
+        }
+      }
+    }
   }
 });
 socket.on('update-media-batch', (updates) => {
@@ -1070,31 +1080,38 @@ document.getElementById('add-media-btn').addEventListener('click', () => {
 
 document.getElementById('media-file').addEventListener('change', (e) => {
   if (!authed) return alert('Сначала дождись подключения (правильный пароль)');
-  const file = e.target.files[0];
-  if (!file) return;
-  const isVideo = file.type.startsWith('video/');
-  const maxSize = isVideo ? 20 * 1024 * 1024 : 12 * 1024 * 1024;
-  if (file.size > maxSize) {
-    alert('Файл слишком большой (максимум ~' + (maxSize / 1024 / 1024) + ' МБ). Возьми файл поменьше.');
-    e.target.value = '';
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = () => {
-    const id = 'id' + Date.now();
-    const spawn = getSpawnPosition();
-    const item = {
-      id, type: isVideo ? 'video' : 'image', url: reader.result,
-      x: spawn.x, y: spawn.y, w: 0.4, h: 0.4, z: 9999,
-      hidden: false, loop: false, volume: 0
+  const files = Array.from(e.target.files || []);
+  if (files.length === 0) return;
+
+  checkpoint(); // одна отмена (Ctrl+Z) уберёт сразу всю пачку файлов
+
+  files.forEach((file, index) => {
+    const isVideo = file.type.startsWith('video/');
+    const maxSize = isVideo ? 20 * 1024 * 1024 : 12 * 1024 * 1024;
+    if (file.size > maxSize) {
+      alert('Файл "' + file.name + '" слишком большой (максимум ~' + (maxSize / 1024 / 1024) + ' МБ) — пропущен.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const id = 'id' + Date.now() + '-' + index;
+      const spawn = getSpawnPosition();
+      // Небольшой сдвиг по горизонтали для каждого файла в пачке, чтобы
+      // они не легли друг на друга ровно в одной точке
+      spawn.x = Math.min(0.85, spawn.x + index * 0.06);
+      const item = {
+        id, type: isVideo ? 'video' : 'image', url: reader.result,
+        x: spawn.x, y: spawn.y, w: 0.4, h: 0.4, z: 9999,
+        hidden: false, loop: false, volume: 0
+      };
+      socket.emit('add-media', item);
+      createOrUpdateMedia(item);
+      sortMediaList();
     };
-    checkpoint();
-    socket.emit('add-media', item);
-    createOrUpdateMedia(item);
-    sortMediaList();
-    e.target.value = '';
-  };
-  reader.readAsDataURL(file);
+    reader.readAsDataURL(file);
+  });
+
+  e.target.value = '';
 });
 
 document.getElementById('clear-media-btn').addEventListener('click', () => {
@@ -1329,17 +1346,22 @@ function addMediaToList(item) {
     restartBtn.textContent = '⏮'; restartBtn.className = 'secondary'; restartBtn.title = 'Начать сначала';
     restartBtn.onclick = () => {
       checkpoint();
-      item.opacity = 100;
+      item.hidden = false;
       sendUpdate(item);
       socket.emit('video-control', { id: item.id, action: 'restart' });
       const localVid = document.getElementById('vid-' + item.id);
-      if (localVid) { localVid.currentTime = 0; localVid.play().catch(() => {}); }
+      if (localVid) {
+        localVid.muted = false;
+        const siteSlider = document.getElementById('sitevol-' + item.id);
+        localVid.volume = siteSlider ? parseInt(siteSlider.value, 10) / 100 : 0;
+        localVid.currentTime = 0;
+        localVid.play().catch(() => {});
+      }
       const cEl = document.getElementById('cm-' + item.id);
       if (cEl) applyPosition(cEl, item);
-      const opacitySlider = document.getElementById('opacity-' + item.id);
-      if (opacitySlider) opacitySlider.value = 100;
-      const opacityVal = document.getElementById('opacity-' + item.id + '-val');
-      if (opacityVal) opacityVal.textContent = '100%';
+      const canvasHideBtn = cEl ? cEl.querySelector('.item-btn:nth-child(3)') : null;
+      if (canvasHideBtn) canvasHideBtn.textContent = '👁';
+      hideShowBtn.textContent = '🙈 Скрыть';
       pauseBtn.textContent = '⏸ Пауза';
     };
 
@@ -1367,33 +1389,10 @@ function addMediaToList(item) {
     const hideShowBtn = document.createElement('button');
     hideShowBtn.id = 'hidebtn-' + item.id;
     hideShowBtn.className = 'secondary';
-    hideShowBtn.textContent = (item.opacity === 0) ? '👁 Показать' : '🙈 Скрыть';
-    hideShowBtn.title = 'Скрыть — прозрачность 0% и пауза (останется в файлах). Показать — снова видно и начнётся заново.';
+    hideShowBtn.textContent = item.hidden ? '👁 Показать' : '🙈 Скрыть';
+    hideShowBtn.title = 'Скрыть — видео продолжает играть в фоне, но невидимо и без звука (даже если громкость не на нуле). Показать — снова видно и слышно.';
     hideShowBtn.onclick = () => {
-      checkpoint();
-      const willHide = item.opacity !== 0;
-      item.opacity = willHide ? 0 : 100;
-      hideShowBtn.textContent = willHide ? '👁 Показать' : '🙈 Скрыть';
-      const cEl = document.getElementById('cm-' + item.id);
-      if (cEl) applyPosition(cEl, item);
-      const opacitySlider = document.getElementById('opacity-' + item.id);
-      if (opacitySlider) opacitySlider.value = item.opacity;
-      const opacityVal = document.getElementById('opacity-' + item.id + '-val');
-      if (opacityVal) opacityVal.textContent = item.opacity + '%';
-      sendUpdate(item);
-
-      const localVid = document.getElementById('vid-' + item.id);
-      if (willHide) {
-        // Скрываем — ставим на паузу и на сайте, и в OBS
-        if (localVid) localVid.pause();
-        socket.emit('video-control', { id: item.id, action: 'pause' });
-        pauseBtn.textContent = '▶ Продолжить';
-      } else {
-        // Показываем — запускаем заново с начала и на сайте, и в OBS
-        if (localVid) { localVid.currentTime = 0; localVid.play().catch(() => {}); }
-        socket.emit('video-control', { id: item.id, action: 'restart' });
-        pauseBtn.textContent = '⏸ Пауза';
-      }
+      toggleHidden(item);
     };
 
     const loopLabel = document.createElement('label');

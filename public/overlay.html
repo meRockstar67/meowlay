@@ -169,12 +169,24 @@ function applyPosition(el, item) {
   }
 }
 
-// Скрытие объекта — прячем визуально и ставим на паузу звук/видео, чтобы
-// не играло невидимым фоном
+// Скрытие объекта — прячем визуально. Для видео дополнительно принудительно
+// глушим звук, пока скрыто (даже если громкость выставлена не на 0), и
+// возвращаем настоящую громкость обратно при показе — видео при этом
+// продолжает играть в фоне, просто без звука и невидимо
 function applyHiddenState(el, item) {
   el.style.display = item.hidden ? 'none' : '';
   el.style.opacity = (item.opacity !== undefined ? item.opacity : 100) / 100;
-  if (item.type === 'youtube') {
+  if (item.type === 'video') {
+    const v = document.getElementById('vid-' + item.id);
+    if (v) {
+      if (item.hidden) {
+        v.muted = true;
+      } else {
+        v.muted = false;
+        v.volume = (item.volume !== undefined ? item.volume : 0) / 100;
+      }
+    }
+  } else if (item.type === 'youtube') {
     const iframe = document.getElementById('yt-' + item.id);
     if (iframe && iframe.contentWindow) {
       const func = item.hidden ? 'pauseVideo' : 'playVideo';
@@ -269,18 +281,21 @@ function createOrUpdateMedia(item) {
     if (item.type === 'video') {
       const videoEl = document.getElementById('vid-' + item.id);
       if (videoEl) {
-        // Снимаем беззвучный режим чуть позже — так надёжнее проходит автоплей
+        // Снимаем беззвучный режим чуть позже — так надёжнее проходит автоплей.
+        // Если объект уже скрыт — оставляем приглушённым.
         setTimeout(() => {
-          videoEl.muted = false;
-          videoEl.volume = (item.volume !== undefined ? item.volume : 100) / 100;
+          if (!item.hidden) {
+            videoEl.muted = false;
+            videoEl.volume = (item.volume !== undefined ? item.volume : 0) / 100;
+          }
         }, 300);
 
-        // Если видео не зациклено — по окончании делаем прозрачным (0%),
-        // само видео при этом продолжает "стоять" на последнем кадре в фоне
+        // Если видео не зациклено — по окончании скрываем (та же система,
+        // что и у фото): невидимо и без звука, но продолжает играть в фоне
         videoEl.addEventListener('ended', () => {
-          if (!videoEl.loop) {
-            item.opacity = 0;
-            applyPosition(el, item);
+          if (!videoEl.loop && !item.hidden) {
+            item.hidden = true;
+            applyHiddenState(el, item);
           }
         });
       }
@@ -361,7 +376,10 @@ socket.on('video-control', (data) => {
   if (!videoEl) return;
   if (data.action === 'restart') {
     const cached = mediaCache[data.id];
-    if (cached) { cached.opacity = 100; applyPosition(document.getElementById('m-' + data.id), cached); }
+    if (cached) {
+      cached.hidden = false;
+      applyHiddenState(document.getElementById('m-' + data.id), cached);
+    }
     videoEl.currentTime = 0;
     videoEl.play().catch(() => {});
   } else if (data.action === 'pause') {
