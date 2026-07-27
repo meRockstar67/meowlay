@@ -14,7 +14,6 @@
   button.secondary { background: #444; }
   button.tool-btn { background: #333; }
   button.tool-btn.active { background: #5865f2; }
-  #pan-mode-btn.active-pan { background: #ffcc00; color: #1e1e2e; font-weight: bold; }
   input, select { padding: 6px; border-radius: 6px; border: 1px solid #555; background: #2a2a3a; color: #eee; }
   .media-form { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 12px; }
 
@@ -36,27 +35,26 @@
 
   #status { margin-bottom: 12px; font-weight: bold; text-align: center; }
 
-  #stage-viewport {
+  #canvas-viewport {
     position: relative; width: 100%; max-width: 960px; aspect-ratio: 16 / 9;
-    margin: 0 auto 12px auto; background: #101018; border: 2px solid #555;
-    overflow: hidden; cursor: grab; touch-action: none;
-  }
-  #stage-viewport.panning { cursor: grabbing; }
-  #stage-world { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
-  #canvas-wrap {
-    position: absolute; top: 0; left: 0; width: 1280px; height: 720px;
-    background-color: #333;
+    margin: 0 auto 12px auto; background-color: #333;
     background-image:
       linear-gradient(45deg, #444 25%, transparent 25%),
       linear-gradient(-45deg, #444 25%, transparent 25%),
       linear-gradient(45deg, transparent 75%, #444 75%),
       linear-gradient(-45deg, transparent 75%, #444 75%);
-    background-size: 20px 20px; border: 2px solid #555; overflow: visible;
+    background-size: 20px 20px; border: 2px solid #555; overflow: hidden;
+    touch-action: none; cursor: default;
   }
-  #zoom-indicator {
-    position: absolute; bottom: 6px; right: 8px; background: #000a; color: #fff;
-    font-size: 12px; padding: 3px 8px; border-radius: 5px; pointer-events: none; z-index: 5;
+  #canvas-viewport.panning { cursor: grabbing; }
+  #canvas-viewport.pan-ready { cursor: grab; }
+  #canvas-viewport.pan-ready #canvas { cursor: grab; }
+  #canvas-viewport.panning #canvas { cursor: grabbing; }
+  #canvas-wrap {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    transform-origin: 0 0; overflow: visible;
   }
+  #zoom-level-label { min-width: 48px; text-align: center; display: inline-block; }
   #twitch-embed { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; overflow: hidden; }
   #twitch-embed iframe { width: 100%; height: 100%; border: 0; pointer-events: none; }
   #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; z-index: 1; }
@@ -97,6 +95,13 @@
     <button class="tool-btn" data-tool="circle">⚪ Круг</button>
     <button class="tool-btn" data-tool="star">⭐ Звезда</button>
     <button class="tool-btn" data-tool="text">🅰️ Текст</button>
+    <button class="tool-btn" data-tool="pan">🖐 Двигать область</button>
+  </div>
+  <div class="toolbar">
+    <button id="zoom-out-btn" class="secondary" title="Отдалить">➖ Отдалить</button>
+    <span id="zoom-level-label">100%</span>
+    <button id="zoom-in-btn" class="secondary" title="Приблизить">➕ Приблизить</button>
+    <button id="zoom-reset-btn" class="secondary">Сбросить масштаб</button>
   </div>
   <div class="toolbar">
     <label>Цвет: <input type="color" id="color" value="#ff0000"></label>
@@ -114,43 +119,16 @@
     <button id="twitch-interact-btn" class="secondary">🖱 Управлять стримом (play/pause/звук)</button>
   </div>
 
-  <div class="toolbar">
-    <button id="pan-mode-btn" class="secondary">🖐 Режим панорамы</button>
-    <button id="zoom-out-btn" class="secondary">➖ Отдалить</button>
-    <span id="zoom-label" style="min-width:52px; text-align:center;">100%</span>
-    <button id="zoom-in-btn" class="secondary">➕ Приблизить</button>
-    <button id="zoom-reset-btn" class="secondary">🎯 Сбросить вид</button>
-  </div>
-
-  <div id="stage-viewport">
-    <div id="stage-world">
-      <div id="canvas-wrap">
-        <div id="twitch-embed"></div>
-        <canvas id="canvas"></canvas>
-        <div id="media-layer"></div>
-      </div>
+  <div id="canvas-viewport">
+    <div id="canvas-wrap">
+      <div id="twitch-embed"></div>
+      <canvas id="canvas"></canvas>
+      <div id="media-layer"></div>
     </div>
-    <div id="zoom-indicator">100%</div>
   </div>
 
   <div class="hint">
-    Рабочая область — практически бесконечная. Кнопка "🖐 Режим панорамы" —
-    самый надёжный способ подвигать вид: включил — тяни мышью где угодно
-    (даже прямо по кадру), выключил — вернулось обычное рисование/перетаскивание
-    медиа. Без включения режима панораму тоже можно подвинуть: зажать среднюю
-    кнопку мыши (колесо) откуда угодно, либо обычную левую — по пустому тёмному
-    фону вокруг кадра. Приближение/отдаление: кнопки ➖/➕, либо Ctrl + колесо
-    мыши (или колесо в любом месте, когда включён "Режим панорамы") — обычное
-    колесо без Ctrl теперь ничего не зумит, чтобы не мешать рисованию. Кадр —
-    это то, что реально видно в OBS, всё за его пределами — черновая зона для
-    подготовки. Если тащишь медиа-объект и уводишь курсор за край текущего
-    вида — вид сам начнёт панорамироваться туда. Кнопка "Сбросить вид"
-    возвращает исходный масштаб и кадр по центру.<br><br>
-    Фигуры: зажми мышь на холсте, тяни, отпусти. Текст: кликни, где написать —
-    поле появится прямо там же, печатай и жми Enter (Esc — отмена). Двойной
-    клик по существующему тексту — редактировать его. Стрелки на клавиатуре —
-    подвинуть выделенный объект на маленький шаг (Shift+стрелка — шаг покрупнее).
-    Ctrl+D — продублировать выделенное.
+    Фигуры: зажми мышь на холсте, тяни, отпусти. Текст: кликни, где написать.
     Медиа-объекты можно таскать мышкой, тянуть за синий квадратик — размер,
     кнопкой ⛶ — на весь экран. Shift+клик — выделить несколько объектов и
     таскать/удалять их вместе (Delete — удалить выделенное). Alt+перетаскивание
@@ -167,7 +145,13 @@
     скрыть/показать объект (не удаляя). Для загруженного видео: кнопка ▶
     в списке всегда запускает видео сначала, "Зациклить" — крутить по
     кругу как гифку, есть отдельные ползунки громкости для OBS и для
-    себя на сайте.
+    себя на сайте. Масштаб рабочей области: колесо мыши — приближение/
+    отдаление к курсору, кнопки ➖/➕/"Сбросить масштаб" — то же самое
+    кнопками. Двигать область: зажми среднюю кнопку мыши, либо держи
+    пробел и таскай левой кнопкой, либо выбери инструмент 🖐 "Двигать
+    область" — тогда обычный клик и перетаскивание будут двигать саму
+    зону, а не рисовать. На телефоне/планшете — сведи/разведи два пальца
+    для масштаба, один палец с активным инструментом 🖐 — для сдвига.
   </div>
 
   <h3>Добавить медиа</h3>
@@ -242,211 +226,183 @@ socket.on('state', (state) => {
 });
 
 // --- Холст ---
-const stageViewport = document.getElementById('stage-viewport');
-const stageWorld = document.getElementById('stage-world');
-const zoomIndicator = document.getElementById('zoom-indicator');
-const zoomLabel = document.getElementById('zoom-label');
+const canvasViewport = document.getElementById('canvas-viewport');
 const canvasWrap = document.getElementById('canvas-wrap');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 let historyList = [];
 
-// Кадр (canvas-wrap) всегда имеет фиксированное "внутреннее" разрешение —
-// это не влияет на то, что реально попадает в OBS (у overlay.html свой
-// resize), а лишь задаёт стабильную систему координат для рисования и
-// процентных позиций медиа, независимую от масштаба/панорамы вида ниже.
-const BASE_W = 1280, BASE_H = 720;
-
 function resizeCanvas() {
-  canvas.width = BASE_W;
-  canvas.height = BASE_H;
+  // Берём именно неотмасштабированный размер вьюпорта (транформация zoom/pan
+  // применяется к canvas-wrap отдельным CSS transform и не должна влиять
+  // на внутреннее разрешение канваса), иначе при зуме качество рисунка
+  // будет "плавать".
+  const rect = canvasViewport.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = rect.height;
   replayHistory();
 }
 resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
 
-// --- Панорама (почти бесконечный холст) и масштаб ---
-// fitScale — коэффициент, при котором кадр (1280x720) ровно вписывается
-// в видимое окно stage-viewport. viewZoom — дополнительный множитель,
-// который крутит колесо мыши (или кнопки +/-). Итоговый CSS-масштаб —
-// их произведение. panX/panY — сдвиг в CSS-пикселях экрана, применяется
-// уже поверх масштаба, поэтому не зависит от него при перерасчётах.
-let fitScale = 1;
-let viewZoom = 1;
-let panX = 0, panY = 0;
+// --- Масштаб (zoom) и перетаскивание (pan) рабочей области ---
+// Область с картинками/стримом (#canvas-wrap) можно свободно приближать/
+// отдалять и двигать — сама зона, где размещаются медиа-объекты и виден
+// стрим, а не отдельные объекты внутри неё. Работает через CSS transform
+// (translate + scale) на слое canvas-wrap внутри неподвижного окна
+// canvas-viewport. Все остальные координаты в коде (клики, перетаскивание
+// объектов, рисование) считаются в процентах от getBoundingClientRect()
+// затрагиваемых элементов, а этот метод уже учитывает CSS-трансформацию,
+// поэтому остальную логику менять не нужно.
+let zoomLevel = 1;
+let panX = 0;
+let panY = 0;
+const ZOOM_MIN = 0.25;
+const ZOOM_MAX = 4;
+const zoomLabel = document.getElementById('zoom-level-label');
 
-function computeFitScale() {
-  const vpRect = stageViewport.getBoundingClientRect();
-  // Небольшой отступ (0.82), чтобы кадр по умолчанию НЕ занимал viewport
-  // впритык — иначе снаружи не остаётся видимого тёмного поля и непонятно,
-  // что вообще можно панорамировать (тянуть).
-  fitScale = (vpRect.width / BASE_W) * 0.82;
+function applyZoomTransform() {
+  canvasWrap.style.transform = 'translate(' + panX + 'px, ' + panY + 'px) scale(' + zoomLevel + ')';
+  if (zoomLabel) zoomLabel.textContent = Math.round(zoomLevel * 100) + '%';
+}
+applyZoomTransform();
+
+function zoomAround(cx, cy, newZoomRaw) {
+  const newZoom = clamp(newZoomRaw, ZOOM_MIN, ZOOM_MAX);
+  // Точка (cx, cy) во "внутренних" координатах canvas-wrap (до трансформации)
+  const wrapX = (cx - panX) / zoomLevel;
+  const wrapY = (cy - panY) / zoomLevel;
+  panX = cx - wrapX * newZoom;
+  panY = cy - wrapY * newZoom;
+  zoomLevel = newZoom;
+  applyZoomTransform();
 }
 
-function currentScale() { return fitScale * viewZoom; }
-
-function applyTransform() {
-  const scale = currentScale();
-  stageWorld.style.transform = 'translate(' + panX + 'px,' + panY + 'px) scale(' + scale + ')';
-  const pct = Math.round(viewZoom * 100) + '%';
-  zoomIndicator.textContent = pct;
-  zoomLabel.textContent = pct;
+function zoomByFactor(factor) {
+  const rect = canvasViewport.getBoundingClientRect();
+  zoomAround(rect.width / 2, rect.height / 2, zoomLevel * factor);
 }
 
-function resetView() {
-  computeFitScale();
-  viewZoom = 1;
-  panX = 0; panY = 0;
-  applyTransform();
-}
-resetView();
-
-window.addEventListener('resize', () => {
-  // Пересчитываем только коэффициент вписывания — текущий пользовательский
-  // масштаб и панораму не трогаем, чтобы не сбивать то, что модератор уже
-  // расположил на холсте.
-  const oldFit = fitScale;
-  computeFitScale();
-  if (oldFit > 0) {
-    const ratio = fitScale / oldFit;
-    // масштаб меняется, значит и панораму нужно пропорционально
-    // скорректировать, чтобы вид не "прыгал" при изменении размера окна
-    panX *= ratio; panY *= ratio;
-  }
-  applyTransform();
+document.getElementById('zoom-in-btn').addEventListener('click', () => zoomByFactor(1.25));
+document.getElementById('zoom-out-btn').addEventListener('click', () => zoomByFactor(1 / 1.25));
+document.getElementById('zoom-reset-btn').addEventListener('click', () => {
+  zoomLevel = 1; panX = 0; panY = 0; applyZoomTransform();
 });
 
-document.getElementById('zoom-reset-btn').addEventListener('click', resetView);
-document.getElementById('zoom-in-btn').addEventListener('click', () => zoomBy(1.25));
-document.getElementById('zoom-out-btn').addEventListener('click', () => zoomBy(0.8));
-
-function zoomAt(cx, cy, newZoom) {
-  newZoom = clamp(newZoom, 0.05, 8);
-  const oldScale = currentScale();
-  const wx = (cx - panX) / oldScale;
-  const wy = (cy - panY) / oldScale;
-  viewZoom = newZoom;
-  const newScale = currentScale();
-  panX = cx - wx * newScale;
-  panY = cy - wy * newScale;
-  applyTransform();
-}
-
-function zoomBy(factor) {
-  const vpRect = stageViewport.getBoundingClientRect();
-  zoomAt(vpRect.width / 2, vpRect.height / 2, viewZoom * factor);
-}
-
-stageViewport.addEventListener('wheel', (e) => {
-  // Обычное колесо мыши больше НЕ зумит само по себе (иначе оно случайно
-  // срабатывает, когда просто листаешь страницу мышкой над кадром, и мешает
-  // рисованию). Зумит только: колесо + Ctrl (стандартное сочетание), либо
-  // колесо в любом месте, когда включён "Режим панорамы".
-  if (!panModeActive && !(e.ctrlKey || e.metaKey)) return;
+canvasViewport.addEventListener('wheel', (e) => {
   e.preventDefault();
-  const vpRect = stageViewport.getBoundingClientRect();
-  const cx = e.clientX - vpRect.left;
-  const cy = e.clientY - vpRect.top;
-  const zoomFactor = Math.exp(-e.deltaY * 0.0015);
-  zoomAt(cx, cy, viewZoom * zoomFactor);
+  const rect = canvasViewport.getBoundingClientRect();
+  const cx = e.clientX - rect.left;
+  const cy = e.clientY - rect.top;
+  const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+  zoomAround(cx, cy, zoomLevel * factor);
 }, { passive: false });
 
-// Перетаскивание для панорамы вида. Самый надёжный способ — кнопка
-// "🖐 Режим панорамы": пока она включена, тянуть можно откуда угодно (даже
-// прямо поверх кадра/медиа), рисование и перетаскивание объектов временно
-// отключены. Плюс всегда доступны быстрые способы, не требующие включать
-// режим: средняя кнопка мыши (колесо) — откуда угодно; обычная левая кнопка —
-// по пустому тёмному фону вокруг кадра.
-// Слушатель повешен на фазе перехвата (capture), поэтому в режиме панорамы
-// событие не доходит до рисования/перетаскивания медиа-объектов.
-let isPanningView = false;
-let panDragStart = null;
-let panDragOrigin = null;
-let panModeActive = false;
-
-const panModeBtn = document.getElementById('pan-mode-btn');
-panModeBtn.addEventListener('click', () => {
-  panModeActive = !panModeActive;
-  panModeBtn.classList.toggle('active-pan', panModeActive);
-  panModeBtn.textContent = panModeActive ? '✋ Панорама включена (клик — выключить)' : '🖐 Режим панорамы';
+// Пробел зажат — временно двигаем область левой кнопкой, как в редакторах
+let spacePressed = false;
+document.addEventListener('keydown', (e) => {
+  if (e.code !== 'Space') return;
+  const tag = document.activeElement && document.activeElement.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+  if (!spacePressed) {
+    spacePressed = true;
+    canvasViewport.classList.add('pan-ready');
+  }
+  e.preventDefault();
+});
+document.addEventListener('keyup', (e) => {
+  if (e.code !== 'Space') return;
+  spacePressed = false;
+  canvasViewport.classList.remove('pan-ready');
 });
 
-function shouldStartPan(e) {
-  if (panModeActive && e.button === 0) return true; // режим панорамы включён — тянуть можно откуда угодно
-  if (e.button === 1) return true; // средняя кнопка мыши — всегда работает
-  if (e.button === 0 && e.target === stageViewport) return true; // ЛКМ по пустому фону — всегда доступно
-  return false;
+function startPan(clientX, clientY) {
+  const startClientX = clientX, startClientY = clientY;
+  const startPanX = panX, startPanY = panY;
+  canvasViewport.classList.add('panning');
+
+  function onMove(ev) {
+    const cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
+    const cy = ev.touches ? ev.touches[0].clientY : ev.clientY;
+    panX = startPanX + (cx - startClientX);
+    panY = startPanY + (cy - startClientY);
+    applyZoomTransform();
+  }
+  function onUp() {
+    canvasViewport.classList.remove('panning');
+    window.removeEventListener('mousemove', onMove);
+    window.removeEventListener('mouseup', onUp);
+    window.removeEventListener('touchmove', onMove);
+    window.removeEventListener('touchend', onUp);
+  }
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
+  window.addEventListener('touchmove', onMove, { passive: false });
+  window.addEventListener('touchend', onUp);
 }
 
-stageViewport.addEventListener('mousedown', (e) => {
-  if (!shouldStartPan(e)) return;
+// Перехватываем клик раньше, чем он дойдёт до обработчиков рисования на
+// canvas-wrap (capture-фаза на родителе срабатывает первой) — если это
+// панорамирование (средняя кнопка / пробел / выбранный инструмент "рука"),
+// гасим событие, иначе пропускаем его дальше как обычно.
+canvasViewport.addEventListener('mousedown', (e) => {
+  const wantsPan = e.button === 1 || spacePressed || tool === 'pan';
+  if (!wantsPan) return;
   e.preventDefault();
   e.stopPropagation();
-  isPanningView = true;
-  panDragStart = { x: e.clientX, y: e.clientY };
-  panDragOrigin = { x: panX, y: panY };
-  stageViewport.classList.add('panning');
+  startPan(e.clientX, e.clientY);
 }, true);
-window.addEventListener('mousemove', (e) => {
-  if (!isPanningView) return;
-  panX = panDragOrigin.x + (e.clientX - panDragStart.x);
-  panY = panDragOrigin.y + (e.clientY - panDragStart.y);
-  applyTransform();
-});
-window.addEventListener('mouseup', () => {
-  if (isPanningView) { isPanningView = false; stageViewport.classList.remove('panning'); }
-});
 
-// То же самое пальцем: одно касание в режиме панорамы — где угодно,
-// иначе — только по пустому фону
-stageViewport.addEventListener('touchstart', (e) => {
-  if (e.touches.length !== 1) return;
-  if (!panModeActive && e.target !== stageViewport) return;
-  isPanningView = true;
-  panDragStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  panDragOrigin = { x: panX, y: panY };
-}, { passive: true });
-window.addEventListener('touchmove', (e) => {
-  if (!isPanningView || e.touches.length !== 1) return;
-  panX = panDragOrigin.x + (e.touches[0].clientX - panDragStart.x);
-  panY = panDragOrigin.y + (e.touches[0].clientY - panDragStart.y);
-  applyTransform();
-}, { passive: true });
-window.addEventListener('touchend', () => { isPanningView = false; });
+// Пинч-зум и панорамирование одним пальцем на тачскрине
+let pinchStartDist = null;
+let pinchStartZoom = 1;
+let pinchStartPan = { x: 0, y: 0 };
+let pinchCenter = { x: 0, y: 0 };
 
-// --- Автопанорама во время перетаскивания медиа-объекта за край видимой области ---
-// Пока держишь объект и уводишь курсор к краю (или за край) stage-viewport,
-// вид сам едет в ту сторону — так объект можно утащить сколь угодно далеко.
-let autoPanRAF = null;
-let autoPanVec = { x: 0, y: 0 };
-
-function computeAutoPanVector(clientX, clientY) {
-  const vp = stageViewport.getBoundingClientRect();
-  const margin = 50, maxSpeed = 18;
-  let vx = 0, vy = 0;
-  if (clientX < vp.left + margin) vx = -maxSpeed * clamp((vp.left + margin - clientX) / margin, 0, 1);
-  else if (clientX > vp.right - margin) vx = maxSpeed * clamp((clientX - (vp.right - margin)) / margin, 0, 1);
-  if (clientY < vp.top + margin) vy = -maxSpeed * clamp((vp.top + margin - clientY) / margin, 0, 1);
-  else if (clientY > vp.bottom - margin) vy = maxSpeed * clamp((clientY - (vp.bottom - margin)) / margin, 0, 1);
-  return { x: vx, y: vy };
-}
-
-function startAutoPanLoop(onTick) {
-  stopAutoPanLoop();
-  function frame() {
-    if (autoPanVec.x !== 0 || autoPanVec.y !== 0) {
-      panX += autoPanVec.x;
-      panY += autoPanVec.y;
-      applyTransform();
-      onTick();
-    }
-    autoPanRAF = requestAnimationFrame(frame);
+canvasViewport.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    e.stopPropagation();
+    const [t1, t2] = e.touches;
+    pinchStartDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+    pinchStartZoom = zoomLevel;
+    pinchStartPan = { x: panX, y: panY };
+    const rect = canvasViewport.getBoundingClientRect();
+    pinchCenter = {
+      x: (t1.clientX + t2.clientX) / 2 - rect.left,
+      y: (t1.clientY + t2.clientY) / 2 - rect.top
+    };
+  } else if (e.touches.length === 1 && tool === 'pan') {
+    e.preventDefault();
+    e.stopPropagation();
+    startPan(e.touches[0].clientX, e.touches[0].clientY);
   }
-  autoPanRAF = requestAnimationFrame(frame);
-}
-function stopAutoPanLoop() {
-  if (autoPanRAF) cancelAnimationFrame(autoPanRAF);
-  autoPanRAF = null;
-  autoPanVec = { x: 0, y: 0 };
+}, { capture: true, passive: false });
+
+canvasViewport.addEventListener('touchmove', (e) => {
+  if (e.touches.length === 2 && pinchStartDist) {
+    e.preventDefault();
+    const [t1, t2] = e.touches;
+    const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+    const newZoom = clamp(pinchStartZoom * (dist / pinchStartDist), ZOOM_MIN, ZOOM_MAX);
+    const wrapX = (pinchCenter.x - pinchStartPan.x) / pinchStartZoom;
+    const wrapY = (pinchCenter.y - pinchStartPan.y) / pinchStartZoom;
+    panX = pinchCenter.x - wrapX * newZoom;
+    panY = pinchCenter.y - wrapY * newZoom;
+    zoomLevel = newZoom;
+    applyZoomTransform();
+  }
+}, { passive: false });
+
+canvasViewport.addEventListener('touchend', (e) => {
+  if (e.touches.length < 2) pinchStartDist = null;
+});
+
+// Курсор-подсказка: когда выбран инструмент "рука", область выглядит
+// перетаскиваемой ещё до нажатия
+function updatePanCursorHint() {
+  if (tool === 'pan') canvasViewport.classList.add('pan-ready');
+  else if (!spacePressed) canvasViewport.classList.remove('pan-ready');
 }
 
 // --- Предпросмотр Twitch-стрима как фон рабочей области ---
@@ -518,6 +474,7 @@ document.querySelectorAll('.tool-btn').forEach((btn) => {
     tool = btn.dataset.tool;
     document.querySelectorAll('.tool-btn').forEach((b) => b.classList.remove('active'));
     btn.classList.add('active');
+    updatePanCursorHint();
   });
 });
 
@@ -648,57 +605,6 @@ let currentStrokeId = null;
 let shapeDragging = false;
 let shapeStart = null;
 
-// Поле ввода текста прямо на холсте (вместо системного prompt()) — кликнул,
-// сразу печатаешь на месте клика. Enter — подтвердить, Shift+Enter — перенос
-// строки, Esc или клик мимо — отмена/сохранение.
-function createInlineEditor({ xFrac, yFrac, fontPx, color, initialText, onCommit }) {
-  const editor = document.createElement('div');
-  editor.contentEditable = 'true';
-  editor.spellcheck = false;
-  editor.style.position = 'absolute';
-  editor.style.left = (xFrac * 100) + '%';
-  editor.style.top = (yFrac * 100) + '%';
-  editor.style.minWidth = '30px';
-  editor.style.maxWidth = '80%';
-  editor.style.padding = '2px 6px';
-  editor.style.color = color;
-  editor.style.fontWeight = 'bold';
-  editor.style.fontFamily = 'sans-serif';
-  editor.style.fontSize = fontPx + 'px';
-  editor.style.background = '#0007';
-  editor.style.outline = '2px dashed #ffcc00';
-  editor.style.whiteSpace = 'pre-wrap';
-  editor.style.zIndex = 99999;
-  editor.style.cursor = 'text';
-  editor.textContent = initialText || '';
-  mediaLayer.appendChild(editor);
-  editor.focus();
-  if (initialText) {
-    const range = document.createRange();
-    range.selectNodeContents(editor);
-    const sel = window.getSelection();
-    sel.removeAllRanges(); sel.addRange(range);
-  }
-
-  let done = false;
-  function finish(commit) {
-    if (done) return;
-    done = true;
-    const text = editor.textContent.trim();
-    editor.remove();
-    document.removeEventListener('mousedown', onOutsideClick, true);
-    if (commit && text) onCommit(text);
-  }
-  editor.addEventListener('keydown', (ev) => {
-    ev.stopPropagation();
-    if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); finish(true); }
-    else if (ev.key === 'Escape') { ev.preventDefault(); finish(false); }
-  });
-  editor.addEventListener('blur', () => finish(true));
-  function onOutsideClick(ev) { if (ev.target !== editor) finish(true); }
-  setTimeout(() => document.addEventListener('mousedown', onOutsideClick, true), 0);
-}
-
 function startAction(e) {
   if (e.target !== canvas) return;
   if (!authed) return;
@@ -715,21 +621,18 @@ function startAction(e) {
     shapeStart = getPos(e);
   } else if (tool === 'text') {
     const pos = getPos(e);
-    const fontPx = Math.max(8, 0.12 * canvas.height * 0.6);
-    createInlineEditor({
-      xFrac: pos.x, yFrac: pos.y, fontPx, color: colorInput.value, initialText: '',
-      onCommit: (text) => {
-        checkpoint();
-        const item = {
-          id: 'id' + Date.now() + Math.random().toString(36).slice(2),
-          type: 'text', text, color: colorInput.value, fontScale: 0.6,
-          x: pos.x, y: pos.y, w: 0.3, h: 0.12, z: 9999
-        };
-        socket.emit('add-media', item);
-        createOrUpdateMedia(item);
-        sortMediaList();
-      }
-    });
+    const text = prompt('Введите текст:');
+    if (text) {
+      checkpoint();
+      const item = {
+        id: 'id' + Date.now() + Math.random().toString(36).slice(2),
+        type: 'text', text, color: colorInput.value, fontScale: 0.6,
+        x: pos.x, y: pos.y, w: 0.3, h: 0.12, z: 9999
+      };
+      socket.emit('add-media', item);
+      createOrUpdateMedia(item);
+      sortMediaList();
+    }
   }
 }
 
@@ -872,60 +775,6 @@ document.addEventListener('keydown', (e) => {
   });
 });
 
-// Стрелки — точная подстройка позиции выделенных объектов (Shift — шаг покрупнее).
-// Один checkpoint на всё "зажатие", а не на каждое повторение автоповтора клавиши.
-let nudgeCheckpointed = false;
-document.addEventListener('keydown', (e) => {
-  if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
-  const active = document.activeElement;
-  if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) return;
-  if (selectedIds.size === 0) return;
-  e.preventDefault();
-  if (!nudgeCheckpointed) { checkpoint(); nudgeCheckpointed = true; }
-  const step = e.shiftKey ? 0.02 : 0.002;
-  let dx = 0, dy = 0;
-  if (e.key === 'ArrowUp') dy = -step;
-  else if (e.key === 'ArrowDown') dy = step;
-  else if (e.key === 'ArrowLeft') dx = -step;
-  else if (e.key === 'ArrowRight') dx = step;
-  const batch = [];
-  selectedIds.forEach((id) => {
-    const it = mediaItemsLocal[id];
-    if (!it) return;
-    it.x += dx; it.y += dy;
-    const el = document.getElementById('cm-' + id);
-    if (el) applyPosition(el, it);
-    batch.push({ id: it.id, x: it.x, y: it.y, w: it.w, h: it.h });
-  });
-  if (batch.length) socket.emit('update-media-batch', batch);
-});
-document.addEventListener('keyup', (e) => {
-  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) nudgeCheckpointed = false;
-});
-
-// Ctrl+D — дублировать выделенные объекты (копия смещена чуть в сторону
-// и сразу становится новым выделением, чтобы можно было её тут же подвинуть).
-document.addEventListener('keydown', (e) => {
-  if (!((e.ctrlKey || e.metaKey) && e.code === 'KeyD')) return;
-  e.preventDefault();
-  if (!authed || selectedIds.size === 0) return;
-  checkpoint();
-  const newIds = [];
-  Array.from(selectedIds).forEach((id) => {
-    const it = mediaItemsLocal[id];
-    if (!it) return;
-    const clone = Object.assign({}, it, {
-      id: 'id' + Date.now() + Math.random().toString(36).slice(2),
-      x: it.x + 0.03, y: it.y + 0.03, z: 9999
-    });
-    socket.emit('add-media', clone);
-    createOrUpdateMedia(clone);
-    newIds.push(clone.id);
-  });
-  sortMediaList();
-  selectMany(newIds);
-});
-
 function extractYoutubeId(url) {
   const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/);
   return m ? m[1] : null;
@@ -937,7 +786,7 @@ function sendUpdate(item) {
     zoom: item.zoom || 1, offsetX: item.offsetX || 0, offsetY: item.offsetY || 0,
     fontScale: item.fontScale, color: item.color,
     hidden: item.hidden, loop: item.loop, volume: item.volume, opacity: item.opacity,
-    rotation: item.rotation, text: item.text
+    rotation: item.rotation
   });
 }
 
@@ -1105,21 +954,6 @@ function createOrUpdateMedia(item) {
 
     el.addEventListener('dblclick', (e) => {
       if (e.target.closest('.resize-handle') || e.target.closest('.item-btn')) return;
-      if (item.type === 'text') {
-        e.stopPropagation();
-        const fontPx = Math.max(8, item.h * canvas.height * (item.fontScale || 0.6));
-        createInlineEditor({
-          xFrac: item.x, yFrac: item.y, fontPx, color: item.color, initialText: item.text,
-          onCommit: (text) => {
-            checkpoint();
-            item.text = text;
-            const textDiv = el.querySelector('.text-content');
-            if (textDiv) textDiv.textContent = text;
-            sendUpdate(item);
-          }
-        });
-        return;
-      }
       checkpoint();
       item.zoom = 1; item.offsetX = 0; item.offsetY = 0;
       applyCropTransform(el, item);
@@ -1180,56 +1014,36 @@ function makeDraggable(el, item) {
     if (!selectedIds.has(item.id)) { selectOnly(item.id); }
     checkpoint();
 
-    // Стартовая позиция курсора в долях кадра (а не в "сырых" экранных
-    // пикселях) — так расчёт остаётся верным, даже если вид панорамируется
-    // или масштабируется прямо во время перетаскивания.
-    const rect0 = canvasWrap.getBoundingClientRect();
-    const grabStart = {
-      x: (e.clientX - rect0.left) / rect0.width,
-      y: (e.clientY - rect0.top) / rect0.height
-    };
+    const rect = canvasWrap.getBoundingClientRect();
+    const startX = e.clientX, startY = e.clientY;
     const startPositions = {};
     selectedIds.forEach((id) => {
       const it = mediaItemsLocal[id];
       if (it) startPositions[id] = { x: it.x, y: it.y };
     });
-    let lastEv = e;
 
-    function applyFromEvent(ev) {
-      const rect = canvasWrap.getBoundingClientRect();
-      const curX = (ev.clientX - rect.left) / rect.width;
-      const curY = (ev.clientY - rect.top) / rect.height;
-      const dx = curX - grabStart.x;
-      const dy = curY - grabStart.y;
+    function onMove(ev) {
+      const dx = (ev.clientX - startX) / rect.width;
+      const dy = (ev.clientY - startY) / rect.height;
       const batch = [];
       selectedIds.forEach((id) => {
         const it = mediaItemsLocal[id];
         const start = startPositions[id];
         if (!it || !start) return;
-        // Позиция больше ничем не ограничена — область почти бесконечная,
-        // объект можно увести сколь угодно далеко от кадра в любую сторону.
-        it.x = start.x + dx;
-        it.y = start.y + dy;
+        it.x = Math.min(Math.max(start.x + dx, -1.5), 2.5);
+        it.y = Math.min(Math.max(start.y + dy, -1.5), 2.5);
         const itEl = document.getElementById('cm-' + id);
         if (itEl) applyPosition(itEl, it);
         batch.push({ id: it.id, x: it.x, y: it.y, w: it.w, h: it.h });
       });
       if (batch.length) socket.emit('update-media-batch', batch);
     }
-
-    function onMove(ev) {
-      lastEv = ev;
-      autoPanVec = computeAutoPanVector(ev.clientX, ev.clientY);
-      applyFromEvent(ev);
-    }
     function onUp() {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
-      stopAutoPanLoop();
     }
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
-    startAutoPanLoop(() => applyFromEvent(lastEv));
   });
 }
 
@@ -1343,15 +1157,10 @@ socket.on('update-media', (data) => {
   if (data.volume !== undefined) item.volume = data.volume;
   if (data.opacity !== undefined) item.opacity = data.opacity;
   if (data.rotation !== undefined) item.rotation = data.rotation;
-  if (data.text !== undefined) item.text = data.text;
   const el = document.getElementById('cm-' + data.id);
   if (el) {
     applyPosition(el, item);
     applyCropTransform(el, item);
-    if (item.type === 'text' && data.text !== undefined) {
-      const textDiv = el.querySelector('.text-content');
-      if (textDiv) textDiv.textContent = item.text;
-    }
     const obsSlider = document.getElementById('obsvol-' + data.id);
     if (obsSlider && data.volume !== undefined) obsSlider.value = data.volume;
     const obsVal = document.getElementById('obsvol-' + data.id + '-val');
