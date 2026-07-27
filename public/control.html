@@ -16,121 +16,123 @@
 
   /* --- Сайдбар --- */
   .sidebar {
-    width: 300px; flex-shrink: 0; background: #15151f; border-right: 1px solid #26263a;
-    display: flex; flex-direction: column; padding: 14px; gap: 12px;
-    overflow-y: auto;
+    width: 250px; flex-shrink: 0; background: #121219; border-right: 1px solid #22222e;
+    display: flex; flex-direction: column; padding: 10px; gap: 8px;
+    overflow-y: auto; font-size: 12.5px;
   }
-  .sidebar::-webkit-scrollbar { width: 8px; }
+  .sidebar::-webkit-scrollbar { width: 6px; }
   .sidebar::-webkit-scrollbar-thumb { background: #2a2a3a; border-radius: 4px; }
 
-  .brand { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 700; padding: 2px 4px 6px 4px; }
+  .brand { display: flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 700; padding: 2px 2px 4px 2px; }
   .brand .brand-icon {
-    width: 26px; height: 26px; border-radius: 7px; background: #5865f2;
-    display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0;
+    width: 22px; height: 22px; border-radius: 6px; background: #5865f2;
+    display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0;
   }
 
-  .side-section { background: #1c1c29; border-radius: 10px; padding: 12px; }
+  .side-section { background: #191922; border-radius: 8px; padding: 9px; }
   .side-section h3 {
-    margin: 0 0 10px 0; text-align: left; font-size: 11px; letter-spacing: 0.06em;
-    text-transform: uppercase; color: #8a8aa3; font-weight: 600;
+    margin: 0 0 7px 0; text-align: left; font-size: 10px; letter-spacing: 0.07em;
+    text-transform: uppercase; color: #7a7a94; font-weight: 600;
   }
 
   h2 { margin: 0; text-align: center; }
-  .toolbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-start; margin-bottom: 8px; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; justify-content: flex-start; margin-bottom: 6px; }
   .toolbar:last-child { margin-bottom: 0; }
   button {
-    background: #5865f2; color: #fff; border: 0; padding: 7px 10px; border-radius: 6px;
-    cursor: pointer; font-size: 13px;
+    background: #5865f2; color: #fff; border: 0; padding: 6px 9px; border-radius: 6px;
+    cursor: pointer; font-size: 12px;
   }
-  button.secondary { background: #2a2a3a; }
-  button.tool-btn { background: #23233333; background: #262636; }
+  button.secondary { background: #23232f; }
+  button.tool-btn { background: #1e1e29; }
   button.tool-btn.active { background: #5865f2; }
   input, select {
-    padding: 6px; border-radius: 6px; border: 1px solid #33334a; background: #1c1c29; color: #eee;
-    font-size: 13px;
+    padding: 5px 7px; border-radius: 6px; border: 1px solid #2a2a3a; background: #14141c; color: #eee;
+    font-size: 12px;
   }
-  .media-form { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-start; margin-bottom: 8px; }
+  .media-form { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-start; margin-bottom: 6px; }
   .media-form:last-child { margin-bottom: 0; }
 
-  .tools-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
-  .tools-grid button { width: 100%; }
+  .tools-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 6px; }
+  .tools-grid button { width: 100%; padding: 6px 4px; }
 
-  #elements-list { list-style: none; padding: 0; margin: 0 0 8px 0; max-height: 320px; overflow-y: auto; }
-  #elements-list::-webkit-scrollbar { width: 6px; }
-  #elements-list::-webkit-scrollbar-thumb { background: #33334a; border-radius: 3px; }
+  #elements-list { list-style: none; padding: 0; margin: 0 0 6px 0; max-height: 280px; overflow-y: auto; }
+  #elements-list::-webkit-scrollbar { width: 5px; }
+  #elements-list::-webkit-scrollbar-thumb { background: #2e2e40; border-radius: 3px; }
   .element-row {
-    display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 7px;
-    margin-bottom: 3px; cursor: pointer; border: 1px solid transparent;
+    display: flex; align-items: center; gap: 6px; padding: 4px 5px; border-radius: 6px;
+    margin-bottom: 1px; cursor: pointer; border: 1px solid transparent;
   }
-  .element-row:hover { background: #22222f; }
+  .element-row:hover { background: #1f1f2b; }
   .element-row.selected { background: #262645; border-color: #5865f2; }
   .element-row .drag-handle { color: #666; cursor: grab; flex-shrink: 0; }
   .element-thumb {
-    width: 24px; height: 24px; border-radius: 5px; background: #2a2a3a; flex-shrink: 0;
+    width: 20px; height: 20px; border-radius: 4px; background: #262633; flex-shrink: 0;
     background-size: cover; background-position: center; display: flex; align-items: center;
-    justify-content: center; font-size: 13px;
+    justify-content: center; font-size: 11px;
   }
   .element-name {
     flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    font-size: 13px;
+    font-size: 12px;
   }
   .element-hide-btn {
-    background: transparent; border: 0; color: #999; font-size: 13px; padding: 2px 4px;
+    background: transparent; border: 0; color: #888; font-size: 12px; padding: 2px 3px;
     flex-shrink: 0; cursor: pointer;
   }
-  .elements-footer { display: flex; align-items: center; gap: 6px; }
+  .elements-footer { display: flex; align-items: center; gap: 5px; }
   .elements-footer input { flex: 1; min-width: 0; }
-  .elements-footer button { flex-shrink: 0; padding: 6px 9px; }
-  .elements-empty { color: #666; font-size: 12.5px; text-align: center; padding: 10px 0; }
+  .elements-footer button { flex-shrink: 0; padding: 5px 8px; }
+  .elements-empty { color: #5c5c6e; font-size: 11.5px; text-align: center; padding: 8px 0; }
 
   #media-list li {
     display: flex; flex-wrap: wrap; gap: 6px; justify-content: space-between; align-items: center;
-    background: #22222f; padding: 6px 10px; margin-bottom: 4px; border-radius: 6px;
-    cursor: grab;
+    background: #1f1f2a; padding: 5px 8px; margin-bottom: 3px; border-radius: 6px;
+    cursor: grab; font-size: 12px;
   }
   #media-list li.dragging { opacity: 0.4; }
   #media-list li .drag-handle { cursor: grab; color: #888; margin-right: 4px; }
 
   #folders-panel { padding: 0; background: transparent; }
-  #folders-list { list-style: none; padding: 0; margin: 8px 0 0 0; }
+  #folders-list { list-style: none; padding: 0; margin: 6px 0 0 0; }
   #folders-list li {
     display: flex; justify-content: space-between; align-items: center;
-    background: #22222f; padding: 6px 10px; margin-bottom: 4px; border-radius: 6px;
+    background: #1f1f2a; padding: 5px 8px; margin-bottom: 3px; border-radius: 6px; font-size: 12px;
   }
 
   /* --- Рабочая область --- */
   .workspace {
     flex: 1; min-width: 0; display: flex; flex-direction: column;
-    padding: 16px 20px; overflow-y: auto; position: relative;
+    padding: 14px 18px; overflow-y: auto; position: relative;
+    background-color: #0c0c12;
+    background-image: radial-gradient(circle, #23233066 1.4px, transparent 1.4px);
+    background-size: 22px 22px;
   }
 
   #status {
-    position: absolute; top: 16px; right: 20px; z-index: 5;
-    background: #1c1c29; border: 1px solid #33334a; padding: 6px 14px;
-    border-radius: 20px; font-weight: 600; font-size: 13px;
+    position: absolute; top: 14px; right: 18px; z-index: 5;
+    background: #191922; border: 1px solid #2a2a3a; padding: 5px 12px;
+    border-radius: 20px; font-weight: 600; font-size: 12px;
   }
 
   #canvas-viewport {
-    position: relative; width: 100%; max-width: 1400px; aspect-ratio: 16 / 9;
-    margin: 46px auto 12px auto; background-color: #333;
-    background-image:
-      linear-gradient(45deg, #444 25%, transparent 25%),
-      linear-gradient(-45deg, #444 25%, transparent 25%),
-      linear-gradient(45deg, transparent 75%, #444 75%),
-      linear-gradient(-45deg, transparent 75%, #444 75%);
-    background-size: 20px 20px; border: 1px solid #33334a; border-radius: 10px; overflow: hidden;
-    touch-action: none; cursor: default;
+    position: relative; flex: 1; width: 100%; min-height: 0;
+    overflow: hidden; touch-action: none; cursor: default;
   }
   #canvas-viewport.panning { cursor: grabbing; }
   #canvas-viewport.pan-ready { cursor: grab; }
   #canvas-viewport.pan-ready #canvas { cursor: grab; }
   #canvas-viewport.panning #canvas { cursor: grabbing; }
   #canvas-wrap {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    transform-origin: 0 0; overflow: visible;
+    position: absolute; top: 0; left: 0; width: 1280px; height: 720px;
+    transform-origin: 0 0; overflow: visible; background-color: #333;
+    background-image:
+      linear-gradient(45deg, #444 25%, transparent 25%),
+      linear-gradient(-45deg, #444 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #444 75%),
+      linear-gradient(-45deg, transparent 75%, #444 75%);
+    background-size: 20px 20px; border: 1px solid #2a2a3a; border-radius: 10px;
   }
   #zoom-level-label { min-width: 44px; text-align: center; display: inline-block; font-size: 13px; color: #ccc; }
-  #twitch-embed { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; overflow: hidden; }
+  #twitch-embed { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; overflow: hidden; border-radius: 10px; }
   #twitch-embed iframe { width: 100%; height: 100%; border: 0; pointer-events: none; }
   #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; z-index: 1; }
 
@@ -182,7 +184,6 @@
         <button class="tool-btn" data-tool="circle">⚪ Круг</button>
         <button class="tool-btn" data-tool="star">⭐ Звезда</button>
         <button class="tool-btn" data-tool="text">🅰️ Текст</button>
-        <button class="tool-btn" data-tool="pan">🖐 Двигать область</button>
       </div>
       <div class="toolbar">
         <label>Цвет: <input type="color" id="color" value="#ff0000"></label>
@@ -281,33 +282,6 @@
         <div id="media-layer"></div>
       </div>
     </div>
-
-    <div class="hint">
-      Фигуры: зажми мышь на холсте, тяни, отпусти. Текст: кликни, где написать.
-      Медиа-объекты можно таскать мышкой, тянуть за синий квадратик — размер,
-      кнопкой ⛶ — на весь экран. Shift+клик — выделить несколько объектов и
-      таскать/удалять их вместе (Delete — удалить выделенное). Alt+перетаскивание
-      по объекту — обрезка/сдвиг картинки внутри рамки, Alt+перетаскивание за
-      уголок — приближение. Двойной клик по объекту сбрасывает обрезку. Ctrl+Z
-      отменяет последнее действие — вообще любое (перемещение, удаление,
-      поворот, папки и т.д.), не только рисунок. Текст можно увеличить, потянув за синий
-      квадратик (растёт вместе с рамкой), либо ползунком "Размер" в списке
-      активных медиа. В списке "Активные медиа" слева можно тянуть строки
-      мышкой, чтобы менять, что поверх чего отображается (слои), а также
-      перетаскивать их прямо на папку в разделе "Папки". Слева можно
-      подключить предпросмотр Twitch-стрима — тогда вместо серого фона
-      будет видно саму трансляцию, поверх которой ты рисуешь. Кнопка 👁 —
-      скрыть/показать объект (не удаляя). Для загруженного видео: кнопка ▶
-      в списке всегда запускает видео сначала, "Зациклить" — крутить по
-      кругу как гифку, есть отдельные ползунки громкости для OBS и для
-      себя на сайте. Масштаб рабочей области: колесо мыши — приближение/
-      отдаление к курсору, кнопки ➖/➕/"Сбросить масштаб" — то же самое
-      кнопками. Двигать область: зажми среднюю кнопку мыши, либо держи
-      пробел и таскай левой кнопкой, либо выбери инструмент 🖐 "Двигать
-      область" — тогда обычный клик и перетаскивание будут двигать саму
-      зону, а не рисовать. На телефоне/планшете — сведи/разведи два пальца
-      для масштаба, один палец с активным инструментом 🖐 — для сдвига.
-    </div>
   </main>
 </div>
 
@@ -354,18 +328,19 @@ const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 let historyList = [];
 
+const OBS_WIDTH = 1280;
+const OBS_HEIGHT = 720;
+
 function resizeCanvas() {
-  // Берём именно неотмасштабированный размер вьюпорта (транформация zoom/pan
-  // применяется к canvas-wrap отдельным CSS transform и не должна влиять
-  // на внутреннее разрешение канваса), иначе при зуме качество рисунка
-  // будет "плавать".
-  const rect = canvasViewport.getBoundingClientRect();
-  canvas.width = rect.width;
-  canvas.height = rect.height;
+  // Разрешение холста — фиксированный логический размер сцены (как в OBS),
+  // не зависит ни от размера окна браузера, ни от текущего масштаба
+  // просмотра: canvas-wrap всегда 1280x720 в CSS-пикселях, а сам вьюпорт
+  // только панорамирует/масштабирует уже готовую картинку через transform.
+  canvas.width = OBS_WIDTH;
+  canvas.height = OBS_HEIGHT;
   replayHistory();
 }
 resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
 
 // --- Масштаб (zoom) и перетаскивание (pan) рабочей области ---
 // Область с картинками/стримом (#canvas-wrap) можно свободно приближать/
@@ -379,6 +354,7 @@ window.addEventListener('resize', resizeCanvas);
 let zoomLevel = 1;
 let panX = 0;
 let panY = 0;
+let userAdjustedView = false;
 const ZOOM_MIN = 0.25;
 const ZOOM_MAX = 4;
 const zoomLabel = document.getElementById('zoom-level-label');
@@ -387,9 +363,27 @@ function applyZoomTransform() {
   canvasWrap.style.transform = 'translate(' + panX + 'px, ' + panY + 'px) scale(' + zoomLevel + ')';
   if (zoomLabel) zoomLabel.textContent = Math.round(zoomLevel * 100) + '%';
 }
-applyZoomTransform();
+
+// Вписывает рамку 1280x720 по центру видимой области вьюпорта — вызывается
+// при первой загрузке и по кнопке "Сбросить масштаб"
+function fitAndCenter() {
+  const rect = canvasViewport.getBoundingClientRect();
+  const scale = Math.min(rect.width / OBS_WIDTH, rect.height / OBS_HEIGHT) * 0.94;
+  zoomLevel = clamp(scale, ZOOM_MIN, ZOOM_MAX);
+  panX = (rect.width - OBS_WIDTH * zoomLevel) / 2;
+  panY = (rect.height - OBS_HEIGHT * zoomLevel) / 2;
+  applyZoomTransform();
+}
+fitAndCenter();
+window.addEventListener('resize', () => {
+  // Пересчитываем разрешение статуса не требуется (канвас фиксированного
+  // размера), но при изменении размера окна заново центрируем сцену, если
+  // модератор ещё не успел сам подвигать/приблизить область
+  if (!userAdjustedView) fitAndCenter();
+});
 
 function zoomAround(cx, cy, newZoomRaw) {
+  userAdjustedView = true;
   const newZoom = clamp(newZoomRaw, ZOOM_MIN, ZOOM_MAX);
   // Точка (cx, cy) во "внутренних" координатах canvas-wrap (до трансформации)
   const wrapX = (cx - panX) / zoomLevel;
@@ -408,7 +402,8 @@ function zoomByFactor(factor) {
 document.getElementById('zoom-in-btn').addEventListener('click', () => zoomByFactor(1.25));
 document.getElementById('zoom-out-btn').addEventListener('click', () => zoomByFactor(1 / 1.25));
 document.getElementById('zoom-reset-btn').addEventListener('click', () => {
-  zoomLevel = 1; panX = 0; panY = 0; applyZoomTransform();
+  userAdjustedView = false;
+  fitAndCenter();
 });
 
 canvasViewport.addEventListener('wheel', (e) => {
@@ -439,6 +434,7 @@ document.addEventListener('keyup', (e) => {
 });
 
 function startPan(clientX, clientY) {
+  userAdjustedView = true;
   const startClientX = clientX, startClientY = clientY;
   const startPanX = panX, startPanY = panY;
   canvasViewport.classList.add('panning');
@@ -464,16 +460,30 @@ function startPan(clientX, clientY) {
 }
 
 // Перехватываем клик раньше, чем он дойдёт до обработчиков рисования на
-// canvas-wrap (capture-фаза на родителе срабатывает первой) — если это
-// панорамирование (средняя кнопка / пробел / выбранный инструмент "рука"),
-// гасим событие, иначе пропускаем его дальше как обычно.
+// canvas-wrap (capture-фаза на родителе срабатывает первой). Панорамируем,
+// если это средняя кнопка мыши, зажатый пробел, либо клик пришёлся мимо
+// холста и медиа-объектов — то есть по пустой "закулисной" области или по
+// фону рамки 1280x720. Внутри самой рамки клик по холсту по-прежнему уходит
+// на рисование выбранным инструментом.
 canvasViewport.addEventListener('mousedown', (e) => {
-  const wantsPan = e.button === 1 || spacePressed || tool === 'pan';
+  const clickedEmpty = e.target === canvasViewport || e.target === canvasWrap;
+  const wantsPan = e.button === 1 || spacePressed || clickedEmpty;
   if (!wantsPan) return;
   e.preventDefault();
   e.stopPropagation();
   startPan(e.clientX, e.clientY);
 }, true);
+
+// Подсказка курсором: над пустой областью (там, где клик приведёт к
+// панорамированию) курсор превращается в "руку" ещё до нажатия
+canvasViewport.addEventListener('mousemove', (e) => {
+  if (canvasViewport.classList.contains('panning')) return;
+  const overEmpty = e.target === canvasViewport || e.target === canvasWrap;
+  canvasViewport.classList.toggle('pan-ready', overEmpty || spacePressed);
+});
+canvasViewport.addEventListener('mouseleave', () => {
+  if (!spacePressed) canvasViewport.classList.remove('pan-ready');
+});
 
 // Пинч-зум и панорамирование одним пальцем на тачскрине
 let pinchStartDist = null;
@@ -494,7 +504,7 @@ canvasViewport.addEventListener('touchstart', (e) => {
       x: (t1.clientX + t2.clientX) / 2 - rect.left,
       y: (t1.clientY + t2.clientY) / 2 - rect.top
     };
-  } else if (e.touches.length === 1 && tool === 'pan') {
+  } else if (e.touches.length === 1 && (e.target === canvasViewport || e.target === canvasWrap)) {
     e.preventDefault();
     e.stopPropagation();
     startPan(e.touches[0].clientX, e.touches[0].clientY);
@@ -504,6 +514,7 @@ canvasViewport.addEventListener('touchstart', (e) => {
 canvasViewport.addEventListener('touchmove', (e) => {
   if (e.touches.length === 2 && pinchStartDist) {
     e.preventDefault();
+    userAdjustedView = true;
     const [t1, t2] = e.touches;
     const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
     const newZoom = clamp(pinchStartZoom * (dist / pinchStartDist), ZOOM_MIN, ZOOM_MAX);
@@ -519,13 +530,6 @@ canvasViewport.addEventListener('touchmove', (e) => {
 canvasViewport.addEventListener('touchend', (e) => {
   if (e.touches.length < 2) pinchStartDist = null;
 });
-
-// Курсор-подсказка: когда выбран инструмент "рука", область выглядит
-// перетаскиваемой ещё до нажатия
-function updatePanCursorHint() {
-  if (tool === 'pan') canvasViewport.classList.add('pan-ready');
-  else if (!spacePressed) canvasViewport.classList.remove('pan-ready');
-}
 
 // --- Предпросмотр Twitch-стрима как фон рабочей области ---
 function extractTwitchChannel(input) {
@@ -596,7 +600,6 @@ document.querySelectorAll('.tool-btn').forEach((btn) => {
     tool = btn.dataset.tool;
     document.querySelectorAll('.tool-btn').forEach((b) => b.classList.remove('active'));
     btn.classList.add('active');
-    updatePanCursorHint();
   });
 });
 
