@@ -6,44 +6,119 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   * { box-sizing: border-box; }
-  body { font-family: sans-serif; background: #1e1e2e; color: #eee; margin: 0; padding: 16px; }
-  .page { max-width: 960px; margin: 0 auto; }
-  h2, h3 { margin: 8px 0; text-align: center; }
-  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; margin-bottom: 10px; }
-  button { background: #5865f2; color: #fff; border: 0; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; }
-  button.secondary { background: #444; }
-  button.tool-btn { background: #333; }
-  button.tool-btn.active { background: #5865f2; }
-  input, select { padding: 6px; border-radius: 6px; border: 1px solid #555; background: #2a2a3a; color: #eee; }
-  .media-form { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 12px; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Segoe UI', sans-serif; background: #101018; color: #eee;
+    margin: 0; overflow: hidden;
+  }
 
-  #media-list { list-style: none; padding: 0; }
+  .app-shell { display: flex; height: 100vh; width: 100vw; }
+
+  /* --- Сайдбар --- */
+  .sidebar {
+    width: 300px; flex-shrink: 0; background: #15151f; border-right: 1px solid #26263a;
+    display: flex; flex-direction: column; padding: 14px; gap: 12px;
+    overflow-y: auto;
+  }
+  .sidebar::-webkit-scrollbar { width: 8px; }
+  .sidebar::-webkit-scrollbar-thumb { background: #2a2a3a; border-radius: 4px; }
+
+  .brand { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 700; padding: 2px 4px 6px 4px; }
+  .brand .brand-icon {
+    width: 26px; height: 26px; border-radius: 7px; background: #5865f2;
+    display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0;
+  }
+
+  .side-section { background: #1c1c29; border-radius: 10px; padding: 12px; }
+  .side-section h3 {
+    margin: 0 0 10px 0; text-align: left; font-size: 11px; letter-spacing: 0.06em;
+    text-transform: uppercase; color: #8a8aa3; font-weight: 600;
+  }
+
+  h2 { margin: 0; text-align: center; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-start; margin-bottom: 8px; }
+  .toolbar:last-child { margin-bottom: 0; }
+  button {
+    background: #5865f2; color: #fff; border: 0; padding: 7px 10px; border-radius: 6px;
+    cursor: pointer; font-size: 13px;
+  }
+  button.secondary { background: #2a2a3a; }
+  button.tool-btn { background: #23233333; background: #262636; }
+  button.tool-btn.active { background: #5865f2; }
+  input, select {
+    padding: 6px; border-radius: 6px; border: 1px solid #33334a; background: #1c1c29; color: #eee;
+    font-size: 13px;
+  }
+  .media-form { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-start; margin-bottom: 8px; }
+  .media-form:last-child { margin-bottom: 0; }
+
+  .tools-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+  .tools-grid button { width: 100%; }
+
+  #elements-list { list-style: none; padding: 0; margin: 0 0 8px 0; max-height: 320px; overflow-y: auto; }
+  #elements-list::-webkit-scrollbar { width: 6px; }
+  #elements-list::-webkit-scrollbar-thumb { background: #33334a; border-radius: 3px; }
+  .element-row {
+    display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 7px;
+    margin-bottom: 3px; cursor: pointer; border: 1px solid transparent;
+  }
+  .element-row:hover { background: #22222f; }
+  .element-row.selected { background: #262645; border-color: #5865f2; }
+  .element-row .drag-handle { color: #666; cursor: grab; flex-shrink: 0; }
+  .element-thumb {
+    width: 24px; height: 24px; border-radius: 5px; background: #2a2a3a; flex-shrink: 0;
+    background-size: cover; background-position: center; display: flex; align-items: center;
+    justify-content: center; font-size: 13px;
+  }
+  .element-name {
+    flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-size: 13px;
+  }
+  .element-hide-btn {
+    background: transparent; border: 0; color: #999; font-size: 13px; padding: 2px 4px;
+    flex-shrink: 0; cursor: pointer;
+  }
+  .elements-footer { display: flex; align-items: center; gap: 6px; }
+  .elements-footer input { flex: 1; min-width: 0; }
+  .elements-footer button { flex-shrink: 0; padding: 6px 9px; }
+  .elements-empty { color: #666; font-size: 12.5px; text-align: center; padding: 10px 0; }
+
   #media-list li {
     display: flex; flex-wrap: wrap; gap: 6px; justify-content: space-between; align-items: center;
-    background: #2a2a3a; padding: 6px 10px; margin-bottom: 4px; border-radius: 6px;
+    background: #22222f; padding: 6px 10px; margin-bottom: 4px; border-radius: 6px;
     cursor: grab;
   }
   #media-list li.dragging { opacity: 0.4; }
   #media-list li .drag-handle { cursor: grab; color: #888; margin-right: 4px; }
 
-  #folders-panel { background: #26263a; border-radius: 8px; padding: 10px; margin-bottom: 12px; }
+  #folders-panel { padding: 0; background: transparent; }
   #folders-list { list-style: none; padding: 0; margin: 8px 0 0 0; }
   #folders-list li {
     display: flex; justify-content: space-between; align-items: center;
-    background: #2a2a3a; padding: 6px 10px; margin-bottom: 4px; border-radius: 6px;
+    background: #22222f; padding: 6px 10px; margin-bottom: 4px; border-radius: 6px;
   }
 
-  #status { margin-bottom: 12px; font-weight: bold; text-align: center; }
+  /* --- Рабочая область --- */
+  .workspace {
+    flex: 1; min-width: 0; display: flex; flex-direction: column;
+    padding: 16px 20px; overflow-y: auto; position: relative;
+  }
+
+  #status {
+    position: absolute; top: 16px; right: 20px; z-index: 5;
+    background: #1c1c29; border: 1px solid #33334a; padding: 6px 14px;
+    border-radius: 20px; font-weight: 600; font-size: 13px;
+  }
 
   #canvas-viewport {
-    position: relative; width: 100%; max-width: 960px; aspect-ratio: 16 / 9;
-    margin: 0 auto 12px auto; background-color: #333;
+    position: relative; width: 100%; max-width: 1400px; aspect-ratio: 16 / 9;
+    margin: 46px auto 12px auto; background-color: #333;
     background-image:
       linear-gradient(45deg, #444 25%, transparent 25%),
       linear-gradient(-45deg, #444 25%, transparent 25%),
       linear-gradient(45deg, transparent 75%, #444 75%),
       linear-gradient(-45deg, transparent 75%, #444 75%);
-    background-size: 20px 20px; border: 2px solid #555; overflow: hidden;
+    background-size: 20px 20px; border: 1px solid #33334a; border-radius: 10px; overflow: hidden;
     touch-action: none; cursor: default;
   }
   #canvas-viewport.panning { cursor: grabbing; }
@@ -54,7 +129,7 @@
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     transform-origin: 0 0; overflow: visible;
   }
-  #zoom-level-label { min-width: 48px; text-align: center; display: inline-block; }
+  #zoom-level-label { min-width: 44px; text-align: center; display: inline-block; font-size: 13px; color: #ccc; }
   #twitch-embed { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; overflow: hidden; }
   #twitch-embed iframe { width: 100%; height: 100%; border: 0; pointer-events: none; }
   #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; z-index: 1; }
@@ -80,113 +155,160 @@
     content: ''; position: absolute; top: 16px; left: 50%; width: 1px; height: 12px;
     background: #ffcc00; transform: translateX(-50%);
   }
-  .hint { text-align: center; font-size: 13px; color: #999; margin-bottom: 12px; }
+  .hint { text-align: left; font-size: 12.5px; color: #888; margin: 4px auto 0 auto; max-width: 1400px; line-height: 1.5; }
 </style>
 </head>
 <body>
-<div class="page">
-  <h2>🎨 Панель модератора</h2>
-  <div id="status">Подключение...</div>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-icon">🐾</span> meowlay</div>
 
-  <div class="toolbar">
-    <button class="tool-btn active" data-tool="pen">✏️ Кисть</button>
-    <button class="tool-btn" data-tool="eraser">🧹 Ластик</button>
-    <button class="tool-btn" data-tool="rect">⬛ Квадрат</button>
-    <button class="tool-btn" data-tool="circle">⚪ Круг</button>
-    <button class="tool-btn" data-tool="star">⭐ Звезда</button>
-    <button class="tool-btn" data-tool="text">🅰️ Текст</button>
-    <button class="tool-btn" data-tool="pan">🖐 Двигать область</button>
-  </div>
-  <div class="toolbar">
-    <button id="zoom-out-btn" class="secondary" title="Отдалить">➖ Отдалить</button>
-    <span id="zoom-level-label">100%</span>
-    <button id="zoom-in-btn" class="secondary" title="Приблизить">➕ Приблизить</button>
-    <button id="zoom-reset-btn" class="secondary">Сбросить масштаб</button>
-  </div>
-  <div class="toolbar">
-    <label>Цвет: <input type="color" id="color" value="#ff0000"></label>
-    <label>Толщина кисти: <input type="range" id="size" min="1" max="40" value="4"></label>
-    <label><input type="checkbox" id="fill-toggle"> Заливка фигур</label>
-    <button id="undo-btn" class="secondary">↩ Отменить (Ctrl+Z)</button>
-    <button id="redo-btn" class="secondary">↪ Повторить (Ctrl+Shift+Z)</button>
-    <button id="clear-canvas-btn" class="secondary">Очистить всё</button>
-  </div>
-
-  <div class="toolbar">
-    <input type="text" id="twitch-channel-input" placeholder="Ник канала на Twitch (или ссылка twitch.tv/...)" style="min-width:260px;">
-    <button id="connect-twitch-btn">📺 Подключить стрим для предпросмотра</button>
-    <button id="disconnect-twitch-btn" class="secondary">Отключить</button>
-    <button id="twitch-interact-btn" class="secondary">🖱 Управлять стримом (play/pause/звук)</button>
-  </div>
-
-  <div id="canvas-viewport">
-    <div id="canvas-wrap">
-      <div id="twitch-embed"></div>
-      <canvas id="canvas"></canvas>
-      <div id="media-layer"></div>
+    <div class="side-section">
+      <h3>Элементы</h3>
+      <ul id="elements-list"></ul>
+      <div class="elements-footer">
+        <button id="elements-hide-selected-btn" class="secondary" title="Скрыть/показать выделенное">🙈</button>
+        <input type="text" id="elements-search" placeholder="search...">
+        <button id="elements-add-btn" class="secondary" title="Добавить медиа">＋</button>
+      </div>
     </div>
-  </div>
 
-  <div class="hint">
-    Фигуры: зажми мышь на холсте, тяни, отпусти. Текст: кликни, где написать.
-    Медиа-объекты можно таскать мышкой, тянуть за синий квадратик — размер,
-    кнопкой ⛶ — на весь экран. Shift+клик — выделить несколько объектов и
-    таскать/удалять их вместе (Delete — удалить выделенное). Alt+перетаскивание
-    по объекту — обрезка/сдвиг картинки внутри рамки, Alt+перетаскивание за
-    уголок — приближение. Двойной клик по объекту сбрасывает обрезку. Ctrl+Z
-    отменяет последнее действие — вообще любое (перемещение, удаление,
-    поворот, папки и т.д.), не только рисунок. Текст можно увеличить, потянув за синий
-    квадратик (растёт вместе с рамкой), либо ползунком "Размер" в списке
-    активных медиа. В списке "Активные медиа" ниже можно тянуть строки
-    мышкой, чтобы менять, что поверх чего отображается (слои), а также
-    перетаскивать их прямо на папку в разделе "Папки". Вверху можно
-    подключить предпросмотр Twitch-стрима — тогда вместо серого фона
-    будет видно саму трансляцию, поверх которой ты рисуешь. Кнопка 👁 —
-    скрыть/показать объект (не удаляя). Для загруженного видео: кнопка ▶
-    в списке всегда запускает видео сначала, "Зациклить" — крутить по
-    кругу как гифку, есть отдельные ползунки громкости для OBS и для
-    себя на сайте. Масштаб рабочей области: колесо мыши — приближение/
-    отдаление к курсору, кнопки ➖/➕/"Сбросить масштаб" — то же самое
-    кнопками. Двигать область: зажми среднюю кнопку мыши, либо держи
-    пробел и таскай левой кнопкой, либо выбери инструмент 🖐 "Двигать
-    область" — тогда обычный клик и перетаскивание будут двигать саму
-    зону, а не рисовать. На телефоне/планшете — сведи/разведи два пальца
-    для масштаба, один палец с активным инструментом 🖐 — для сдвига.
-  </div>
-
-  <h3>Добавить медиа</h3>
-  <div class="media-form">
-    <select id="media-type">
-      <option value="image">Картинка / GIF (ссылка)</option>
-      <option value="youtube">YouTube (ссылка)</option>
-      <option value="ninja">OBS Ninja (ссылка)</option>
-    </select>
-    <input type="text" id="media-url" placeholder="Вставь ссылку" style="flex:1; min-width:200px;">
-    <button id="add-media-btn">Добавить по ссылке</button>
-  </div>
-  <div class="media-form">
-    <label style="background:#5865f2; padding:8px 12px; border-radius:6px; cursor:pointer;">
-      📁 Загрузить фото/гифку/видео с компьютера (можно сразу несколько)
-      <input type="file" id="media-file" accept="image/*,video/*" multiple style="display:none;">
-    </label>
-    <button id="clear-media-btn" class="secondary">Убрать всё медиа</button>
-  </div>
-
-  <div id="folders-panel">
-    <h3 style="margin-top:0;">🗂 Папки</h3>
-    <div class="media-form" style="margin-bottom:8px;">
-      <input type="text" id="folder-name-input" placeholder="Название папки" style="flex:1; min-width:160px;">
-      <button id="create-folder-btn">Создать папку</button>
+    <div class="side-section">
+      <h3>Инструменты</h3>
+      <div class="tools-grid">
+        <button class="tool-btn active" data-tool="pen">✏️ Кисть</button>
+        <button class="tool-btn" data-tool="eraser">🧹 Ластик</button>
+        <button class="tool-btn" data-tool="rect">⬛ Квадрат</button>
+        <button class="tool-btn" data-tool="circle">⚪ Круг</button>
+        <button class="tool-btn" data-tool="star">⭐ Звезда</button>
+        <button class="tool-btn" data-tool="text">🅰️ Текст</button>
+        <button class="tool-btn" data-tool="pan">🖐 Двигать область</button>
+      </div>
+      <div class="toolbar">
+        <label>Цвет: <input type="color" id="color" value="#ff0000"></label>
+      </div>
+      <div class="toolbar">
+        <label>Толщина: <input type="range" id="size" min="1" max="40" value="4"></label>
+      </div>
+      <div class="toolbar">
+        <label><input type="checkbox" id="fill-toggle"> Заливка фигур</label>
+      </div>
+      <div class="toolbar">
+        <button id="undo-btn" class="secondary">↩ Отменить</button>
+        <button id="redo-btn" class="secondary">↪ Повторить</button>
+      </div>
+      <div class="toolbar">
+        <button id="clear-canvas-btn" class="secondary">Очистить всё</button>
+      </div>
     </div>
-    <div class="hint" style="margin-bottom:6px;">
-      Кнопка "Выделить" в папке выделяет все объекты внутри — после этого
-      можно перетащить любой из них, и вся папка поедет вместе.
-    </div>
-    <ul id="folders-list"></ul>
-  </div>
 
-  <h3>Активные медиа (слои — верхняя строка отображается поверх остальных)</h3>
-  <ul id="media-list"></ul>
+    <div class="side-section">
+      <h3>Масштаб области</h3>
+      <div class="toolbar">
+        <button id="zoom-out-btn" class="secondary" title="Отдалить">➖</button>
+        <span id="zoom-level-label">100%</span>
+        <button id="zoom-in-btn" class="secondary" title="Приблизить">➕</button>
+      </div>
+      <div class="toolbar">
+        <button id="zoom-reset-btn" class="secondary">Сбросить масштаб</button>
+      </div>
+    </div>
+
+    <div class="side-section">
+      <h3>Twitch-стрим</h3>
+      <div class="toolbar">
+        <input type="text" id="twitch-channel-input" placeholder="Ник канала на Twitch" style="width:100%;">
+      </div>
+      <div class="toolbar">
+        <button id="connect-twitch-btn">📺 Подключить</button>
+        <button id="disconnect-twitch-btn" class="secondary">Отключить</button>
+      </div>
+      <div class="toolbar">
+        <button id="twitch-interact-btn" class="secondary">🖱 Управлять стримом</button>
+      </div>
+    </div>
+
+    <div class="side-section">
+      <h3>Добавить медиа</h3>
+      <div class="media-form">
+        <select id="media-type" style="width:100%;">
+          <option value="image">Картинка / GIF (ссылка)</option>
+          <option value="youtube">YouTube (ссылка)</option>
+          <option value="ninja">OBS Ninja (ссылка)</option>
+        </select>
+      </div>
+      <div class="media-form">
+        <input type="text" id="media-url" placeholder="Вставь ссылку" style="flex:1; min-width:0;">
+      </div>
+      <div class="media-form">
+        <button id="add-media-btn" style="width:100%;">Добавить по ссылке</button>
+      </div>
+      <div class="media-form">
+        <label style="background:#5865f2; padding:8px 12px; border-radius:6px; cursor:pointer; width:100%; text-align:center;">
+          📁 Загрузить с компьютера
+          <input type="file" id="media-file" accept="image/*,video/*" multiple style="display:none;">
+        </label>
+      </div>
+      <div class="media-form">
+        <button id="clear-media-btn" class="secondary" style="width:100%;">Убрать всё медиа</button>
+      </div>
+    </div>
+
+    <div class="side-section" id="folders-panel">
+      <h3>🗂 Папки</h3>
+      <div class="media-form">
+        <input type="text" id="folder-name-input" placeholder="Название папки" style="flex:1; min-width:0;">
+      </div>
+      <div class="media-form">
+        <button id="create-folder-btn" style="width:100%;">Создать папку</button>
+      </div>
+      <ul id="folders-list"></ul>
+    </div>
+
+    <div class="side-section">
+      <h3>Активные медиа (слои)</h3>
+      <ul id="media-list"></ul>
+    </div>
+  </aside>
+
+  <main class="workspace">
+    <div id="status">Подключение...</div>
+
+    <div id="canvas-viewport">
+      <div id="canvas-wrap">
+        <div id="twitch-embed"></div>
+        <canvas id="canvas"></canvas>
+        <div id="media-layer"></div>
+      </div>
+    </div>
+
+    <div class="hint">
+      Фигуры: зажми мышь на холсте, тяни, отпусти. Текст: кликни, где написать.
+      Медиа-объекты можно таскать мышкой, тянуть за синий квадратик — размер,
+      кнопкой ⛶ — на весь экран. Shift+клик — выделить несколько объектов и
+      таскать/удалять их вместе (Delete — удалить выделенное). Alt+перетаскивание
+      по объекту — обрезка/сдвиг картинки внутри рамки, Alt+перетаскивание за
+      уголок — приближение. Двойной клик по объекту сбрасывает обрезку. Ctrl+Z
+      отменяет последнее действие — вообще любое (перемещение, удаление,
+      поворот, папки и т.д.), не только рисунок. Текст можно увеличить, потянув за синий
+      квадратик (растёт вместе с рамкой), либо ползунком "Размер" в списке
+      активных медиа. В списке "Активные медиа" слева можно тянуть строки
+      мышкой, чтобы менять, что поверх чего отображается (слои), а также
+      перетаскивать их прямо на папку в разделе "Папки". Слева можно
+      подключить предпросмотр Twitch-стрима — тогда вместо серого фона
+      будет видно саму трансляцию, поверх которой ты рисуешь. Кнопка 👁 —
+      скрыть/показать объект (не удаляя). Для загруженного видео: кнопка ▶
+      в списке всегда запускает видео сначала, "Зациклить" — крутить по
+      кругу как гифку, есть отдельные ползунки громкости для OBS и для
+      себя на сайте. Масштаб рабочей области: колесо мыши — приближение/
+      отдаление к курсору, кнопки ➖/➕/"Сбросить масштаб" — то же самое
+      кнопками. Двигать область: зажми среднюю кнопку мыши, либо держи
+      пробел и таскай левой кнопкой, либо выбери инструмент 🖐 "Двигать
+      область" — тогда обычный клик и перетаскивание будут двигать саму
+      зону, а не рисовать. На телефоне/планшете — сведи/разведи два пальца
+      для масштаба, один палец с активным инструментом 🖐 — для сдвига.
+    </div>
+  </main>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -725,6 +847,7 @@ function toggleHidden(item) {
   if (canvasHideBtn) canvasHideBtn.textContent = item.hidden ? '🙈' : '👁';
   const listHideBtn = document.getElementById('hidebtn-' + item.id);
   if (listHideBtn) listHideBtn.textContent = item.hidden ? '👁 Показать' : '🙈 Скрыть';
+  renderElementsList();
 }
 
 // --- Медиа ---
@@ -1132,6 +1255,7 @@ function removeMediaLocal(id) {
   if (li) li.remove();
   delete mediaItemsLocal[id];
   selectedIds.delete(id);
+  renderElementsList();
 }
 
 socket.on('add-media', (item) => { createOrUpdateMedia(item); sortMediaList(); });
@@ -1293,7 +1417,7 @@ document.getElementById('media-file').addEventListener('change', (e) => {
       const item = {
         id, type: isVideo ? 'video' : 'image', url: reader.result,
         x: spawn.x, y: spawn.y, w: 0.4, h: 0.4, z: 9999,
-        hidden: false, loop: false, volume: 0
+        hidden: false, loop: false, volume: 0, label: file.name
       };
       socket.emit('add-media', item);
       createOrUpdateMedia(item);
@@ -1315,6 +1439,104 @@ document.getElementById('clear-media-btn').addEventListener('click', () => {
 });
 
 // --- Список "Активные медиа" — можно тянуть строки мышкой (порядок слоёв) ---
+function renderElementsList() {
+  const listEl = document.getElementById('elements-list');
+  if (!listEl) return;
+  const searchInput = document.getElementById('elements-search');
+  const filter = (searchInput && searchInput.value ? searchInput.value : '').toLowerCase().trim();
+  listEl.innerHTML = '';
+
+  const items = Object.values(mediaItemsLocal).sort((a, b) => (b.z || 0) - (a.z || 0));
+  let shown = 0;
+
+  items.forEach((item) => {
+    const typeLabel = item.type === 'image' ? 'Картинка' : item.type === 'video' ? 'Видео' :
+      item.type === 'youtube' ? 'YouTube' : item.type === 'text' ? 'Текст' : 'OBS Ninja';
+    const name = item.label ? item.label : typeLabel;
+    if (filter && name.toLowerCase().indexOf(filter) === -1) return;
+    shown++;
+
+    const li = document.createElement('li');
+    li.className = 'element-row' + (selectedIds.has(item.id) ? ' selected' : '');
+    li.draggable = true;
+    li.dataset.id = item.id;
+
+    li.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', item.id);
+    });
+
+    const handle = document.createElement('span');
+    handle.className = 'drag-handle';
+    handle.textContent = '⠿';
+    li.appendChild(handle);
+
+    const thumb = document.createElement('span');
+    thumb.className = 'element-thumb';
+    if (item.type === 'image') {
+      thumb.style.backgroundImage = 'url(' + item.url + ')';
+    } else if (item.type === 'video') {
+      thumb.textContent = '🎬';
+    } else if (item.type === 'text') {
+      thumb.textContent = '🅰️';
+    } else if (item.type === 'youtube') {
+      thumb.textContent = '📺';
+    } else {
+      thumb.textContent = '🥷';
+    }
+    li.appendChild(thumb);
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'element-name';
+    nameSpan.textContent = name;
+    nameSpan.title = name;
+    li.appendChild(nameSpan);
+
+    const hideBtn = document.createElement('button');
+    hideBtn.className = 'element-hide-btn';
+    hideBtn.title = 'Скрыть/показать';
+    hideBtn.textContent = item.hidden ? '🙈' : '👁';
+    hideBtn.onclick = (ev) => { ev.stopPropagation(); toggleHidden(item); };
+    li.appendChild(hideBtn);
+
+    li.addEventListener('click', (ev) => {
+      if (ev.target === hideBtn) return;
+      if (ev.shiftKey) toggleSelect(item.id);
+      else selectOnly(item.id);
+      renderElementsList();
+    });
+
+    listEl.appendChild(li);
+  });
+
+  if (shown === 0) {
+    const empty = document.createElement('li');
+    empty.className = 'elements-empty';
+    empty.textContent = filter ? 'Ничего не найдено' : 'Пока нет загруженных элементов';
+    listEl.appendChild(empty);
+  }
+}
+
+document.getElementById('elements-search').addEventListener('input', renderElementsList);
+
+document.getElementById('elements-hide-selected-btn').addEventListener('click', () => {
+  if (selectedIds.size === 0) return;
+  checkpoint();
+  Array.from(selectedIds).forEach((id) => {
+    const it = mediaItemsLocal[id];
+    if (it) toggleHidden(it);
+  });
+});
+
+document.getElementById('elements-add-btn').addEventListener('click', () => {
+  const urlInput = document.getElementById('media-url');
+  if (urlInput) {
+    urlInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    urlInput.focus();
+  }
+});
+
+renderElementsList();
+
 function sortMediaList() {
   const lis = Array.from(mediaListEl.children);
   lis.sort((a, b) => {
@@ -1323,6 +1545,7 @@ function sortMediaList() {
     return zb - za;
   });
   lis.forEach((li) => mediaListEl.appendChild(li));
+  renderElementsList();
 }
 
 function getDragAfterElement(container, y) {
@@ -1452,6 +1675,7 @@ function addMediaToList(item) {
     item.label = newName.trim();
     labelSpan.textContent = item.label ? item.label : (typeLabel + ': ' + shortUrl);
     socket.emit('rename-media', { id: item.id, label: item.label });
+    renderElementsList();
   };
   li.appendChild(renameBtn);
 
