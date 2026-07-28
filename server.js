@@ -2,6 +2,8 @@ require('dotenv').config();
 
 const express = require('express');
 const http = require('http');
+const https = require('https');
+const { URL } = require('url');
 const { Server } = require('socket.io');
 const path = require('path');
 const fs = require('fs');
@@ -17,6 +19,68 @@ const PASSWORD = process.env.MOD_PASSWORD || 'meowh0cki2026';
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+// --- Прокси для "браузер-источников", которые запрещают показывать себя
+// во фрейме (X-Frame-Options / Content-Security-Policy), например ChatIS.
+// Панель модератора подставляет сюда ссылку так: /proxy?url=<ссылка>
+// Ответ отдаём с нашего же домена и без запрещающих заголовков — поэтому
+// браузер больше не против встроить это внутрь overlay.html.
+app.get('/proxy', (req, res) => {
+  const target = req.query.url;
+  if (!target) return res.status(400).send('Missing url param');
+
+  let targetUrl;
+  try {
+    targetUrl = new URL(target);
+  } catch (e) {
+    return res.status(400).send('Bad url');
+  }
+  if (targetUrl.protocol !== 'http:' && targetUrl.protocol !== 'https:') {
+    return res.status(400).send('Bad protocol');
+  }
+
+  const lib = targetUrl.protocol === 'http:' ? http : https;
+
+  const upstreamReq = lib.get(targetUrl, {
+    headers: { 'User-Agent': req.get('User-Agent') || 'Mozilla/5.0' }
+  }, (upstreamRes) => {
+    // Редиректы просто прогоняем через тот же прокси-роут
+    if (upstreamRes.statusCode >= 300 && upstreamRes.statusCode < 400 && upstreamRes.headers.location) {
+      const redirected = new URL(upstreamRes.headers.location, targetUrl).toString();
+      upstreamRes.resume(); // сливаем тело, чтобы не висело соединение
+      return res.redirect('/proxy?url=' + encodeURIComponent(redirected));
+    }
+
+    const contentType = upstreamRes.headers['content-type'] || '';
+    res.status(upstreamRes.statusCode);
+    if (contentType) res.set('Content-Type', contentType);
+    // Явно не копируем заголовки, которые запрещают встраивание во фрейм
+    res.removeHeader('X-Frame-Options');
+    res.set('Content-Security-Policy', '');
+
+    if (contentType.includes('text/html')) {
+      const chunks = [];
+      upstreamRes.on('data', (chunk) => chunks.push(chunk));
+      upstreamRes.on('end', () => {
+        let body = Buffer.concat(chunks).toString('utf8');
+        // Переписываем корневые относительные пути (src="/..." href="/...")
+        // на абсолютные — иначе CSS/JS/картинки сайта попытаются
+        // загрузиться с нашего домена и не найдутся
+        body = body.replace(/(src|href)=("|')\/(?!\/)/g, `$1=$2${targetUrl.origin}/`);
+        res.send(body);
+      });
+    } else {
+      upstreamRes.pipe(res);
+    }
+  });
+
+  upstreamReq.on('error', (err) => {
+    console.error('Proxy error:', err.message);
+    if (!res.headersSent) res.status(502).send('Proxy error: ' + err.message);
+  });
+
+  req.on('close', () => upstreamReq.destroy());
+});
+
 // Защита от полного падения сервера: если где-то вылетит необработанная
 // ошибка, просто логируем её и продолжаем работать, вместо того чтобы
 // ронять весь процесс целиком
@@ -27,7 +91,7 @@ process.on('unhandledRejection', (err) => {
   console.error('Необработанный rejection (сервер продолжает работать):', err);
 });
 
-let mediaItems = {};   // id -> {id, type, url, x, y, w, h, z, zoom, offsetX, offsetY, videoId?}
+let mediaItems = {};   // id -> {id, type, url, x, y, w, h, z, zoom, offsetX, offsetY, cropW, cropH, videoId?}
 let history = [];      // [{ id, kind: 'stroke'|'shape'|'text', ... }]
 let folders = {};      // id -> { id, name, memberIds: [] }
 let nextZ = 1;
@@ -219,6 +283,8 @@ io.on('connection', (socket) => {
     if (data.zoom !== undefined) item.zoom = data.zoom;
     if (data.offsetX !== undefined) item.offsetX = data.offsetX;
     if (data.offsetY !== undefined) item.offsetY = data.offsetY;
+    if (data.cropW !== undefined) item.cropW = data.cropW;
+    if (data.cropH !== undefined) item.cropH = data.cropH;
     if (data.fontSize !== undefined) item.fontSize = data.fontSize;
     if (data.fontScale !== undefined) item.fontScale = data.fontScale;
     if (data.color !== undefined) item.color = data.color;
@@ -283,6 +349,12 @@ io.on('connection', (socket) => {
   socket.on('video-control', (data) => {
     if (!authed) return;
     socket.broadcast.emit('video-control', data);
+  });
+
+  // Перезагрузка браузер-источника (кнопка "Обновить" у объекта типа "browser")
+  socket.on('browser-control', (data) => {
+    if (!authed) return;
+    socket.broadcast.emit('browser-control', data);
   });
 
   // --- Папки ---
