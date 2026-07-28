@@ -96,7 +96,9 @@ let history = [];      // [{ id, kind: 'stroke'|'shape'|'text', ... }]
 let folders = {};      // id -> { id, name, memberIds: [] }
 let nextZ = 1;
 
-// --- Сохранение состояния на диск (переживает "засыпание" сервера) ---
+// --- Сохранение состояния на диск (переживает "засыпание" сервера, но
+// стирается при полном редеплое — так было и раньше, это особенность
+// Render, а не что-то новое) ---
 const STATE_FILE = path.join(__dirname, 'data', 'state.json');
 
 function loadState() {
