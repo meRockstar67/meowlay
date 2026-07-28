@@ -1145,7 +1145,7 @@ function createOrUpdateMedia(item) {
 
     const handle = document.createElement('div');
     handle.className = 'resize-handle';
-    handle.title = 'Тяни — обычное изменение размера. Alt + тяни — обрезка без масштабирования содержимого (как в OBS).';
+    handle.title = 'Тяни — обычное изменение размера. Ctrl + тяни — зум содержимого внутри той же рамки. Alt + тяни — обрезка без масштабирования содержимого (как в OBS).';
     el.appendChild(handle);
 
     const rotateHandle = document.createElement('div');
@@ -1261,6 +1261,27 @@ function makeResizable(handle, el, item) {
     const rect = canvasWrap.getBoundingClientRect();
     const startX = e.clientX, startY = e.clientY;
     const startW = item.w, startH = item.h;
+
+    if (e.ctrlKey) {
+      // Зум "внутри себя": рамка не меняется, а содержимое просто
+      // приближается/отдаляется в своих собственных границах (тянешь вверх —
+      // приближает, вниз — отдаляет). Крутится вокруг центра объекта.
+      const zoomStartY = e.clientY;
+      const startZoom = item.zoom || 1;
+      function onZoomMove(ev) {
+        const dy = zoomStartY - ev.clientY;
+        item.zoom = clamp(startZoom + dy / 150, 1, 5);
+        applyCropTransform(el, item);
+        sendUpdate(item);
+      }
+      function onZoomUp() {
+        window.removeEventListener('mousemove', onZoomMove);
+        window.removeEventListener('mouseup', onZoomUp);
+      }
+      window.addEventListener('mousemove', onZoomMove);
+      window.addEventListener('mouseup', onZoomUp);
+      return;
+    }
 
     if (e.altKey) {
       // Обрезка "как в OBS": тянешь ту же ручку, рамка так же меняет размер,
