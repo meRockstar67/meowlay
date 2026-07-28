@@ -198,6 +198,13 @@ function applyHiddenState(el, item) {
 function applyCropTransform(el, item) {
   const inner = el.querySelector('.crop-inner');
   if (!inner) return;
+  // Тот же расчёт, что и в панели модератора: crop-inner держит абсолютный
+  // размер контента (cropW/cropH), поэтому обрезка рамки не масштабирует
+  // само содержимое — оно просто обрезается по краю рамки.
+  const cropW = item.cropW || item.w;
+  const cropH = item.cropH || item.h;
+  inner.style.width = (item.w ? (cropW / item.w * 100) : 100) + '%';
+  inner.style.height = (item.h ? (cropH / item.h * 100) : 100) + '%';
   const zoom = item.zoom || 1;
   const ox = item.offsetX || 0;
   const oy = item.offsetY || 0;
@@ -205,6 +212,8 @@ function applyCropTransform(el, item) {
 }
 
 function createOrUpdateMedia(item) {
+  if (item.cropW === undefined) item.cropW = item.w;
+  if (item.cropH === undefined) item.cropH = item.h;
   mediaCache[item.id] = item;
   let el = document.getElementById('m-' + item.id);
   if (!el) {
@@ -251,6 +260,10 @@ function createOrUpdateMedia(item) {
       inner.innerHTML = '<iframe id="yt-' + item.id + '" src="https://www.youtube.com/embed/' +
         item.videoId + '?autoplay=1&mute=1&enablejsapi=1&origin=' + origin +
         '" allow="autoplay; encrypted-media" allowfullscreen></iframe>';
+    } else if (item.type === 'browser') {
+      // Как Browser Source в OBS — просто произвольный сайт в iframe поверх сцены
+      inner.innerHTML = '<iframe id="browser-' + item.id + '" src="' + item.url +
+        '" allow="autoplay; encrypted-media; fullscreen"></iframe>';
     } else if (item.type === 'ninja') {
       inner.innerHTML = '<iframe src="' + item.url + '" allow="camera; microphone; autoplay"></iframe>';
     }
@@ -316,6 +329,8 @@ function updateMediaPosition(data) {
     if (data.zoom !== undefined) cached.zoom = data.zoom;
     if (data.offsetX !== undefined) cached.offsetX = data.offsetX;
     if (data.offsetY !== undefined) cached.offsetY = data.offsetY;
+    if (data.cropW !== undefined) cached.cropW = data.cropW;
+    if (data.cropH !== undefined) cached.cropH = data.cropH;
     if (data.fontScale !== undefined) cached.fontScale = data.fontScale;
     if (data.color !== undefined) cached.color = data.color;
     if (data.hidden !== undefined) cached.hidden = data.hidden;
@@ -368,6 +383,12 @@ socket.on('youtube-control', (data) => {
   else if (data.action === 'mute') func = 'mute';
   else if (data.action === 'unmute') func = 'unMute';
   if (func) iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func, args }), '*');
+});
+
+// --- Управление браузер-источником (обновить страницу, как F5 в OBS) ---
+socket.on('browser-control', (data) => {
+  const frame = document.getElementById('browser-' + data.id);
+  if (frame && data.action === 'reload') frame.src = frame.src;
 });
 
 // --- Управление загруженным видео (play всегда сначала, pause) ---

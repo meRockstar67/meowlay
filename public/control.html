@@ -8,45 +8,61 @@
   * { box-sizing: border-box; }
   html, body { height: 100%; }
   body {
-    font-family: 'Segoe UI', sans-serif; background: #101018; color: #eee;
+    font-family: 'Segoe UI', sans-serif; background: #160d1b; color: #eee;
     margin: 0; overflow: hidden;
   }
 
-  .app-shell { display: flex; height: 100vh; width: 100vw; }
+  .app-shell { display: flex; height: 100vh; width: 100vw; position: relative; }
 
   /* --- Сайдбар --- */
   .sidebar {
-    width: 250px; flex-shrink: 0; background: #121219; border-right: 1px solid #22222e;
+    width: 250px; flex-shrink: 0; background: #17101b; border-right: 1px solid #2b1e32;
     display: flex; flex-direction: column; padding: 10px; gap: 8px;
     overflow-y: auto; font-size: 12.5px;
+    transition: width 0.18s ease, padding 0.18s ease, border-color 0.18s ease;
   }
   .sidebar::-webkit-scrollbar { width: 6px; }
-  .sidebar::-webkit-scrollbar-thumb { background: #2a2a3a; border-radius: 4px; }
+  .sidebar::-webkit-scrollbar-thumb { background: #362440; border-radius: 4px; }
+
+  body.sidebar-collapsed .sidebar {
+    width: 0; padding: 0; border-color: transparent; overflow: hidden;
+  }
+
+  /* --- Кнопка скрыть/показать боковую панель --- */
+  #sidebar-toggle-btn {
+    position: fixed; top: 14px; left: 258px; z-index: 50;
+    width: 26px; height: 26px; padding: 0; border-radius: 50%;
+    background: #201625; border: 1px solid #362440; color: #ccc;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; cursor: pointer; transition: left 0.18s ease;
+  }
+  #sidebar-toggle-btn:hover { background: #2c1f33; }
+  body.sidebar-collapsed #sidebar-toggle-btn { left: 8px; }
 
   .brand { display: flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 700; padding: 2px 2px 4px 2px; }
   .brand .brand-icon {
-    width: 22px; height: 22px; border-radius: 6px; background: #5865f2;
+    width: 22px; height: 22px; border-radius: 6px; background: #6d28d9;
     display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0;
   }
 
-  .side-section { background: #191922; border-radius: 8px; padding: 9px; }
+  .side-section { background: #201625; border-radius: 8px; padding: 9px; }
   .side-section h3 {
     margin: 0 0 7px 0; text-align: left; font-size: 10px; letter-spacing: 0.07em;
-    text-transform: uppercase; color: #7a7a94; font-weight: 600;
+    text-transform: uppercase; color: #8d729c; font-weight: 600;
   }
 
   h2 { margin: 0; text-align: center; }
   .toolbar { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; justify-content: flex-start; margin-bottom: 6px; }
   .toolbar:last-child { margin-bottom: 0; }
   button {
-    background: #5865f2; color: #fff; border: 0; padding: 6px 9px; border-radius: 6px;
+    background: #6d28d9; color: #fff; border: 0; padding: 6px 9px; border-radius: 6px;
     cursor: pointer; font-size: 12px;
   }
-  button.secondary { background: #23232f; }
-  button.tool-btn { background: #1e1e29; }
-  button.tool-btn.active { background: #5865f2; }
+  button.secondary { background: #2c1f33; }
+  button.tool-btn { background: #261a2d; }
+  button.tool-btn.active { background: #6d28d9; }
   input, select {
-    padding: 5px 7px; border-radius: 6px; border: 1px solid #2a2a3a; background: #14141c; color: #eee;
+    padding: 5px 7px; border-radius: 6px; border: 1px solid #362440; background: #1a111f; color: #eee;
     font-size: 12px;
   }
   .media-form { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-start; margin-bottom: 6px; }
@@ -57,16 +73,16 @@
 
   #elements-list { list-style: none; padding: 0; margin: 0 0 6px 0; max-height: 280px; overflow-y: auto; }
   #elements-list::-webkit-scrollbar { width: 5px; }
-  #elements-list::-webkit-scrollbar-thumb { background: #2e2e40; border-radius: 3px; }
+  #elements-list::-webkit-scrollbar-thumb { background: #3c2846; border-radius: 3px; }
   .element-row {
     display: flex; align-items: center; gap: 6px; padding: 4px 5px; border-radius: 6px;
     margin-bottom: 1px; cursor: pointer; border: 1px solid transparent;
   }
-  .element-row:hover { background: #1f1f2b; }
-  .element-row.selected { background: #262645; border-color: #5865f2; }
+  .element-row:hover { background: #281b2f; }
+  .element-row.selected { background: #3d1d4e; border-color: #6d28d9; }
   .element-row .drag-handle { color: #666; cursor: grab; flex-shrink: 0; }
   .element-thumb {
-    width: 20px; height: 20px; border-radius: 4px; background: #262633; flex-shrink: 0;
+    width: 20px; height: 20px; border-radius: 4px; background: #302138; flex-shrink: 0;
     background-size: cover; background-position: center; display: flex; align-items: center;
     justify-content: center; font-size: 11px;
   }
@@ -74,6 +90,15 @@
     flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     font-size: 12px;
   }
+  .element-layer-btns {
+    display: flex; flex-direction: column; flex-shrink: 0; line-height: 0;
+  }
+  .element-layer-btns button {
+    background: transparent; border: 0; color: #888; font-size: 8px; padding: 0;
+    width: 14px; height: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .element-layer-btns button:hover:not(:disabled) { color: #eee; }
+  .element-layer-btns button:disabled { color: #3a3a45; cursor: default; }
   .element-hide-btn {
     background: transparent; border: 0; color: #888; font-size: 12px; padding: 2px 3px;
     flex-shrink: 0; cursor: pointer;
@@ -81,35 +106,49 @@
   .elements-footer { display: flex; align-items: center; gap: 5px; }
   .elements-footer input { flex: 1; min-width: 0; }
   .elements-footer button { flex-shrink: 0; padding: 5px 8px; }
-  .elements-empty { color: #5c5c6e; font-size: 11.5px; text-align: center; padding: 8px 0; }
+  .elements-empty { color: #695674; font-size: 11.5px; text-align: center; padding: 8px 0; }
 
-  #media-list li {
-    display: flex; flex-wrap: wrap; gap: 6px; justify-content: space-between; align-items: center;
-    background: #1f1f2a; padding: 5px 8px; margin-bottom: 3px; border-radius: 6px;
-    cursor: grab; font-size: 12px;
+  #media-list { max-height: 460px; overflow-y: auto; padding-right: 2px; }
+  #media-list::-webkit-scrollbar { width: 5px; }
+  #media-list::-webkit-scrollbar-thumb { background: #3c2846; border-radius: 3px; }
+  .media-card {
+    display: flex; flex-direction: column; gap: 6px;
+    background: #231729; border: 1px solid #2c2033; border-radius: 8px;
+    padding: 8px; margin-bottom: 6px; font-size: 12px; cursor: grab;
   }
-  #media-list li.dragging { opacity: 0.4; }
-  #media-list li .drag-handle { cursor: grab; color: #888; margin-right: 4px; }
+  .media-card:hover { border-color: #442b52; }
+  .media-card.dragging { opacity: 0.4; }
+  .media-card-header { display: flex; align-items: center; gap: 6px; }
+  .media-card-header .drag-handle { cursor: grab; color: #666; flex-shrink: 0; }
+  .media-card-name {
+    flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-weight: 600; font-size: 12.5px;
+  }
+  .media-card-header button { flex-shrink: 0; padding: 4px 7px; font-size: 12px; }
+  .media-card-remove { background: #3a2020 !important; color: #ff8080; }
+  .media-card-remove:hover { background: #4a2626 !important; }
+  .media-card .folder-select { width: 100%; }
+  .media-card-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 
   #folders-panel { padding: 0; background: transparent; }
   #folders-list { list-style: none; padding: 0; margin: 6px 0 0 0; }
   #folders-list li {
     display: flex; justify-content: space-between; align-items: center;
-    background: #1f1f2a; padding: 5px 8px; margin-bottom: 3px; border-radius: 6px; font-size: 12px;
+    background: #271b2e; padding: 5px 8px; margin-bottom: 3px; border-radius: 6px; font-size: 12px;
   }
 
   /* --- Рабочая область --- */
   .workspace {
     flex: 1; min-width: 0; display: flex; flex-direction: column;
     padding: 14px 18px; overflow-y: auto; position: relative;
-    background-color: #0c0c12;
-    background-image: radial-gradient(circle, #23233066 1.4px, transparent 1.4px);
+    background-color: #100a14;
+    background-image: radial-gradient(circle, #2d1e3566 1.4px, transparent 1.4px);
     background-size: 22px 22px;
   }
 
   #status {
     position: absolute; top: 14px; right: 18px; z-index: 5;
-    background: #191922; border: 1px solid #2a2a3a; padding: 5px 12px;
+    background: #201625; border: 1px solid #362440; padding: 5px 12px;
     border-radius: 20px; font-weight: 600; font-size: 12px;
   }
 
@@ -129,7 +168,7 @@
       linear-gradient(-45deg, #444 25%, transparent 25%),
       linear-gradient(45deg, transparent 75%, #444 75%),
       linear-gradient(-45deg, transparent 75%, #444 75%);
-    background-size: 20px 20px; border: 1px solid #2a2a3a; border-radius: 10px;
+    background-size: 20px 20px; border: 1px solid #362440; border-radius: 10px;
   }
   #zoom-level-label { min-width: 44px; text-align: center; display: inline-block; font-size: 13px; color: #ccc; }
   #twitch-embed { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; overflow: hidden; border-radius: 10px; }
@@ -138,7 +177,7 @@
 
   #media-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
   .media-item {
-    position: absolute; border: 2px dashed #5865f2; pointer-events: auto; cursor: move;
+    position: absolute; border: 2px dashed #6d28d9; pointer-events: auto; cursor: move;
     user-select: none; -webkit-user-select: none; -moz-user-select: none;
   }
   .media-item * { user-select: none; -webkit-user-select: none; -moz-user-select: none; -webkit-user-drag: none; }
@@ -147,11 +186,11 @@
   .media-item .item-controls { position: absolute; top: -14px; right: -14px; display: flex; gap: 4px; }
   .media-item .item-btn { width: 26px; height: 26px; border-radius: 50%; background: #444; color: #fff; border: 0; font-size: 13px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
   .media-item .item-btn.remove { background: #e33; }
-  .resize-handle { position: absolute; right: -8px; bottom: -8px; width: 16px; height: 16px; background: #5865f2; border-radius: 3px; cursor: nwse-resize; pointer-events: auto; }
+  .resize-handle { position: absolute; right: -8px; bottom: -8px; width: 16px; height: 16px; background: #6d28d9; border-radius: 3px; cursor: nwse-resize; pointer-events: auto; }
   .rotate-handle {
     position: absolute; top: -28px; left: 50%; transform: translateX(-50%);
     width: 16px; height: 16px; background: #ffcc00; border-radius: 50%;
-    cursor: grab; pointer-events: auto; border: 2px solid #1e1e2e;
+    cursor: grab; pointer-events: auto; border: 2px solid #2a1933;
   }
   .rotate-handle::after {
     content: ''; position: absolute; top: 16px; left: 50%; width: 1px; height: 12px;
@@ -162,6 +201,7 @@
 </head>
 <body>
 <div class="app-shell">
+  <button id="sidebar-toggle-btn" title="Скрыть/показать панель">◀</button>
   <aside class="sidebar">
     <div class="brand"><span class="brand-icon">🐾</span> meowlay</div>
 
@@ -235,6 +275,7 @@
         <select id="media-type" style="width:100%;">
           <option value="image">Картинка / GIF (ссылка)</option>
           <option value="youtube">YouTube (ссылка)</option>
+          <option value="browser">Браузер-источник (любой сайт)</option>
           <option value="ninja">OBS Ninja (ссылка)</option>
         </select>
       </div>
@@ -245,7 +286,7 @@
         <button id="add-media-btn" style="width:100%;">Добавить по ссылке</button>
       </div>
       <div class="media-form">
-        <label style="background:#5865f2; padding:8px 12px; border-radius:6px; cursor:pointer; width:100%; text-align:center;">
+        <label style="background:#6d28d9; padding:8px 12px; border-radius:6px; cursor:pointer; width:100%; text-align:center;">
           📁 Загрузить с компьютера
           <input type="file" id="media-file" accept="image/*,video/*" multiple style="display:none;">
         </label>
@@ -289,6 +330,18 @@
 <script>
 const socket = io();
 const statusEl = document.getElementById('status');
+
+// --- Скрыть/показать боковую панель ---
+const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
+function setSidebarCollapsed(collapsed) {
+  document.body.classList.toggle('sidebar-collapsed', collapsed);
+  sidebarToggleBtn.textContent = collapsed ? '▶' : '◀';
+  localStorage.setItem('meowlay-sidebar-collapsed', collapsed ? '1' : '0');
+}
+setSidebarCollapsed(localStorage.getItem('meowlay-sidebar-collapsed') === '1');
+sidebarToggleBtn.addEventListener('click', () => {
+  setSidebarCollapsed(!document.body.classList.contains('sidebar-collapsed'));
+});
 
 let authed = false;
 const password = prompt('Введи пароль модератора:');
@@ -910,6 +963,7 @@ function sendUpdate(item) {
   socket.emit('update-media', {
     id: item.id, x: item.x, y: item.y, w: item.w, h: item.h,
     zoom: item.zoom || 1, offsetX: item.offsetX || 0, offsetY: item.offsetY || 0,
+    cropW: item.cropW, cropH: item.cropH,
     fontScale: item.fontScale, color: item.color,
     hidden: item.hidden, loop: item.loop, volume: item.volume, opacity: item.opacity,
     rotation: item.rotation
@@ -925,6 +979,16 @@ function updateTextStyle(el, item) {
 function applyCropTransform(el, item) {
   const inner = el.querySelector('.crop-inner');
   if (!inner) return;
+  // Обрезка "как в OBS": crop-inner держит АБСОЛЮТНЫЙ размер контента
+  // (cropW/cropH, в тех же долях канваса, что и item.w/h), а не 100% рамки.
+  // Пока рамку (item.w/h) не трогают — контент занимает её целиком (как раньше).
+  // Как только рамку обрезают через Alt+ручку, cropW/cropH остаются
+  // прежними (в абсолютных единицах), а рамка становится меньше/больше —
+  // отсюда и обрезка без масштабирования содержимого.
+  const cropW = item.cropW || item.w;
+  const cropH = item.cropH || item.h;
+  inner.style.width = (item.w ? (cropW / item.w * 100) : 100) + '%';
+  inner.style.height = (item.h ? (cropH / item.h * 100) : 100) + '%';
   const zoom = item.zoom || 1;
   const ox = item.offsetX || 0;
   const oy = item.offsetY || 0;
@@ -966,6 +1030,8 @@ function createOrUpdateMedia(item) {
   if (item.fontScale === undefined) item.fontScale = 0.6;
   if (item.offsetX === undefined) item.offsetX = 0;
   if (item.offsetY === undefined) item.offsetY = 0;
+  if (item.cropW === undefined) item.cropW = item.w;
+  if (item.cropH === undefined) item.cropH = item.h;
   if (item.z === undefined) item.z = 0;
   if (item.hidden === undefined) item.hidden = false;
   if (item.loop === undefined) item.loop = false;
@@ -1013,6 +1079,12 @@ function createOrUpdateMedia(item) {
       inner.appendChild(textDiv);
     } else if (item.type === 'youtube') {
       inner.innerHTML = '<iframe src="https://www.youtube.com/embed/' + item.videoId + '"></iframe>';
+    } else if (item.type === 'browser') {
+      // Как Browser Source в OBS: просто грузим произвольный сайт в iframe.
+      // На холсте модератора он тоже виден "живьём" (перетаскивание работает
+      // поверх него, т.к. у .media-item iframe стоит pointer-events: none).
+      inner.innerHTML = '<iframe id="browser-' + item.id + '" src="' + item.url +
+        '" allow="autoplay; encrypted-media; fullscreen" style="background:#111;"></iframe>';
     } else if (item.type === 'ninja') {
       inner.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#0008;color:#fff;font-size:12px;text-align:center;">OBS Ninja</div>';
     }
@@ -1067,6 +1139,7 @@ function createOrUpdateMedia(item) {
 
     const handle = document.createElement('div');
     handle.className = 'resize-handle';
+    handle.title = 'Тяни — обычное изменение размера. Alt + тяни — обрезка без масштабирования содержимого (как в OBS).';
     el.appendChild(handle);
 
     const rotateHandle = document.createElement('div');
@@ -1082,6 +1155,7 @@ function createOrUpdateMedia(item) {
       if (e.target.closest('.resize-handle') || e.target.closest('.item-btn')) return;
       checkpoint();
       item.zoom = 1; item.offsetX = 0; item.offsetY = 0;
+      item.cropW = item.w; item.cropH = item.h;
       applyCropTransform(el, item);
       sendUpdate(item);
     });
@@ -1178,33 +1252,50 @@ function makeResizable(handle, el, item) {
     e.stopPropagation();
     e.preventDefault();
     checkpoint();
-    if (e.altKey) {
-      const zoomStartY = e.clientY;
-      const startZoom = item.zoom || 1;
-      function onZoomMove(ev) {
-        const dy = zoomStartY - ev.clientY;
-        item.zoom = clamp(startZoom + dy / 150, 1, 5);
-        applyCropTransform(el, item);
-        sendUpdate(item);
-      }
-      function onZoomUp() {
-        window.removeEventListener('mousemove', onZoomMove);
-        window.removeEventListener('mouseup', onZoomUp);
-      }
-      window.addEventListener('mousemove', onZoomMove);
-      window.addEventListener('mouseup', onZoomUp);
-      return;
-    }
-
     const rect = canvasWrap.getBoundingClientRect();
     const startX = e.clientX, startY = e.clientY;
     const startW = item.w, startH = item.h;
+
+    if (e.altKey) {
+      // Обрезка "как в OBS": тянешь ту же ручку, рамка так же меняет размер,
+      // но само содержимое НЕ масштабируется — остаётся тем же абсолютным
+      // размером (cropW/cropH) и просто обрезается/приоткрывается по краю
+      // рамки, вместо того чтобы растягиваться под неё.
+      if (item.cropW === undefined) item.cropW = item.w;
+      if (item.cropH === undefined) item.cropH = item.h;
+      function onCropResizeMove(ev) {
+        const dx = (ev.clientX - startX) / rect.width;
+        const dy = (ev.clientY - startY) / rect.height;
+        item.w = Math.max(0.05, startW + dx);
+        item.h = Math.max(0.05, startH + dy);
+        // cropW/cropH намеренно не трогаем — контент держит свой абсолютный размер
+        applyPosition(el, item);
+        applyCropTransform(el, item);
+        sendUpdate(item);
+      }
+      function onCropResizeUp() {
+        window.removeEventListener('mousemove', onCropResizeMove);
+        window.removeEventListener('mouseup', onCropResizeUp);
+      }
+      window.addEventListener('mousemove', onCropResizeMove);
+      window.addEventListener('mouseup', onCropResizeUp);
+      return;
+    }
+
+    // Обычное изменение размера — рамка и содержимое растягиваются вместе,
+    // как раньше. Если объект был обрезан (cropW/cropH заданы), масштабируем
+    // их пропорционально, чтобы сохранить ту же обрезку при новом размере.
+    const startCropW = item.cropW !== undefined ? item.cropW : startW;
+    const startCropH = item.cropH !== undefined ? item.cropH : startH;
     function onMove(ev) {
       const dx = (ev.clientX - startX) / rect.width;
       const dy = (ev.clientY - startY) / rect.height;
       item.w = Math.max(0.05, startW + dx);
       item.h = Math.max(0.05, startH + dy);
+      item.cropW = startCropW * (item.w / startW);
+      item.cropH = startCropH * (item.h / startH);
       applyPosition(el, item);
+      applyCropTransform(el, item);
       sendUpdate(item);
     }
     function onUp() {
@@ -1277,6 +1368,8 @@ socket.on('update-media', (data) => {
   if (data.zoom !== undefined) item.zoom = data.zoom;
   if (data.offsetX !== undefined) item.offsetX = data.offsetX;
   if (data.offsetY !== undefined) item.offsetY = data.offsetY;
+  if (data.cropW !== undefined) item.cropW = data.cropW;
+  if (data.cropH !== undefined) item.cropH = data.cropH;
   if (data.fontScale !== undefined) item.fontScale = data.fontScale;
   if (data.color !== undefined) item.color = data.color;
   if (data.hidden !== undefined) item.hidden = data.hidden;
@@ -1356,7 +1449,7 @@ socket.on('rename-media', (data) => {
   item.label = data.label;
   const labelSpan = document.getElementById('label-' + data.id);
   if (labelSpan) {
-    const typeLabel = item.type === 'image' ? 'Картинка' : item.type === 'video' ? 'Видео' : item.type === 'youtube' ? 'YouTube' : item.type === 'text' ? 'Текст' : 'OBS Ninja';
+    const typeLabel = item.type === 'image' ? 'Картинка' : item.type === 'video' ? 'Видео' : item.type === 'youtube' ? 'YouTube' : item.type === 'text' ? 'Текст' : item.type === 'browser' ? 'Браузер' : 'OBS Ninja';
     const shortUrl = item.type === 'text'
       ? '"' + item.text.slice(0, 25) + '"'
       : (item.url.startsWith('data:') ? '(загружено с компьютера)' : item.url.slice(0, 30));
@@ -1452,9 +1545,9 @@ function renderElementsList() {
   const items = Object.values(mediaItemsLocal).sort((a, b) => (b.z || 0) - (a.z || 0));
   let shown = 0;
 
-  items.forEach((item) => {
+  items.forEach((item, idx) => {
     const typeLabel = item.type === 'image' ? 'Картинка' : item.type === 'video' ? 'Видео' :
-      item.type === 'youtube' ? 'YouTube' : item.type === 'text' ? 'Текст' : 'OBS Ninja';
+      item.type === 'youtube' ? 'YouTube' : item.type === 'text' ? 'Текст' : item.type === 'browser' ? 'Браузер' : 'OBS Ninja';
     const name = item.label ? item.label : typeLabel;
     if (filter && name.toLowerCase().indexOf(filter) === -1) return;
     shown++;
@@ -1483,6 +1576,8 @@ function renderElementsList() {
       thumb.textContent = '🅰️';
     } else if (item.type === 'youtube') {
       thumb.textContent = '📺';
+    } else if (item.type === 'browser') {
+      thumb.textContent = '🌐';
     } else {
       thumb.textContent = '🥷';
     }
@@ -1494,6 +1589,27 @@ function renderElementsList() {
     nameSpan.title = name;
     li.appendChild(nameSpan);
 
+    // Перенос слоя выше/ниже — быстрая замена перетаскиванию, работает
+    // сразу и надёжно, без риска промахнуться мышкой в узком списке
+    const layerBtns = document.createElement('span');
+    layerBtns.className = 'element-layer-btns';
+
+    const upBtn = document.createElement('button');
+    upBtn.textContent = '▲';
+    upBtn.title = 'Поднять выше (на передний план)';
+    upBtn.disabled = idx === 0;
+    upBtn.onclick = (ev) => { ev.stopPropagation(); moveElementLayer(item.id, -1); };
+
+    const downBtn = document.createElement('button');
+    downBtn.textContent = '▼';
+    downBtn.title = 'Опустить ниже (на задний план)';
+    downBtn.disabled = idx === items.length - 1;
+    downBtn.onclick = (ev) => { ev.stopPropagation(); moveElementLayer(item.id, 1); };
+
+    layerBtns.appendChild(upBtn);
+    layerBtns.appendChild(downBtn);
+    li.appendChild(layerBtns);
+
     const hideBtn = document.createElement('button');
     hideBtn.className = 'element-hide-btn';
     hideBtn.title = 'Скрыть/показать';
@@ -1502,7 +1618,7 @@ function renderElementsList() {
     li.appendChild(hideBtn);
 
     li.addEventListener('click', (ev) => {
-      if (ev.target === hideBtn) return;
+      if (ev.target === hideBtn || ev.target === upBtn || ev.target === downBtn) return;
       if (ev.shiftKey) toggleSelect(item.id);
       else selectOnly(item.id);
       renderElementsList();
@@ -1517,6 +1633,29 @@ function renderElementsList() {
     empty.textContent = filter ? 'Ничего не найдено' : 'Пока нет загруженных элементов';
     listEl.appendChild(empty);
   }
+}
+
+// Переставляет объект на одну позицию выше (dir=-1) или ниже (dir=+1)
+// в стеке слоёв — тот же порядок, что использует "Активные медиа (слои)".
+function moveElementLayer(id, dir) {
+  const order = Object.values(mediaItemsLocal).sort((a, b) => (b.z || 0) - (a.z || 0)).map((it) => it.id);
+  const idx = order.indexOf(id);
+  const newIdx = idx + dir;
+  if (idx === -1 || newIdx < 0 || newIdx >= order.length) return;
+  checkpoint();
+  const tmp = order[idx];
+  order[idx] = order[newIdx];
+  order[newIdx] = tmp;
+  order.forEach((oid, i) => {
+    const z = order.length - i;
+    const it = mediaItemsLocal[oid];
+    if (it) it.z = z;
+    const el = document.getElementById('cm-' + oid);
+    if (el) el.style.zIndex = z;
+  });
+  socket.emit('reorder-media', order);
+  sortMediaList();
+  renderElementsList();
 }
 
 document.getElementById('elements-search').addEventListener('input', renderElementsList);
@@ -1641,6 +1780,7 @@ function createPercentControl(idSuffix, labelText, initialValue, step, title, on
 
 function addMediaToList(item) {
   const li = document.createElement('li');
+  li.className = 'media-card';
   li.id = 'li-' + item.id;
   li.dataset.id = item.id;
   li.draggable = true;
@@ -1652,20 +1792,25 @@ function addMediaToList(item) {
   });
   li.addEventListener('dragend', () => { li.classList.remove('dragging'); });
 
+  const header = document.createElement('div');
+  header.className = 'media-card-header';
+  li.appendChild(header);
+
   const dragHandle = document.createElement('span');
   dragHandle.className = 'drag-handle';
   dragHandle.textContent = '⠿';
-  li.appendChild(dragHandle);
+  header.appendChild(dragHandle);
 
-  const typeLabel = item.type === 'image' ? 'Картинка' : item.type === 'video' ? 'Видео' : item.type === 'youtube' ? 'YouTube' : item.type === 'text' ? 'Текст' : 'OBS Ninja';
+  const typeLabel = item.type === 'image' ? 'Картинка' : item.type === 'video' ? 'Видео' : item.type === 'youtube' ? 'YouTube' : item.type === 'text' ? 'Текст' : item.type === 'browser' ? 'Браузер' : 'OBS Ninja';
   const shortUrl = item.type === 'text'
     ? '"' + item.text.slice(0, 25) + '"'
     : (item.url.startsWith('data:') ? '(загружено с компьютера)' : item.url.slice(0, 30));
   const labelSpan = document.createElement('span');
   labelSpan.id = 'label-' + item.id;
+  labelSpan.className = 'media-card-name';
   labelSpan.textContent = item.label ? item.label : (typeLabel + ': ' + shortUrl);
-  labelSpan.style.flex = '1';
-  li.appendChild(labelSpan);
+  labelSpan.title = labelSpan.textContent;
+  header.appendChild(labelSpan);
 
   const renameBtn = document.createElement('button');
   renameBtn.textContent = '✏️';
@@ -1677,10 +1822,22 @@ function addMediaToList(item) {
     checkpoint();
     item.label = newName.trim();
     labelSpan.textContent = item.label ? item.label : (typeLabel + ': ' + shortUrl);
+    labelSpan.title = labelSpan.textContent;
     socket.emit('rename-media', { id: item.id, label: item.label });
     renderElementsList();
   };
-  li.appendChild(renameBtn);
+  header.appendChild(renameBtn);
+
+  const removeBtnTop = document.createElement('button');
+  removeBtnTop.textContent = '✕';
+  removeBtnTop.className = 'secondary media-card-remove';
+  removeBtnTop.title = 'Убрать';
+  removeBtnTop.onclick = () => {
+    checkpoint();
+    socket.emit('remove-media', item.id);
+    removeMediaLocal(item.id);
+  };
+  header.appendChild(removeBtnTop);
 
   // Выбор папки для объекта
   const folderSelect = document.createElement('select');
@@ -1694,6 +1851,7 @@ function addMediaToList(item) {
 
   if (item.type === 'text') {
     const textControls = document.createElement('div');
+    textControls.className = 'media-card-row';
     textControls.style.display = 'flex'; textControls.style.gap = '6px'; textControls.style.alignItems = 'center';
 
     const sizeLabel = document.createElement('span');
@@ -1734,6 +1892,7 @@ function addMediaToList(item) {
 
   if (item.type === 'youtube') {
     const ytControls = document.createElement('div');
+    ytControls.className = 'media-card-row';
     ytControls.style.display = 'flex'; ytControls.style.gap = '6px'; ytControls.style.alignItems = 'center'; ytControls.style.flexWrap = 'wrap';
 
     const playBtn = document.createElement('button');
@@ -1754,8 +1913,34 @@ function addMediaToList(item) {
     li.appendChild(ytControls);
   }
 
+  if (item.type === 'browser') {
+    const bControls = document.createElement('div');
+    bControls.className = 'media-card-row';
+    bControls.style.display = 'flex'; bControls.style.gap = '6px'; bControls.style.alignItems = 'center'; bControls.style.flexWrap = 'wrap';
+
+    const reloadBtn = document.createElement('button');
+    reloadBtn.textContent = '🔄 Обновить'; reloadBtn.className = 'secondary';
+    reloadBtn.title = 'Перезагрузить страницу источника (как F5 в OBS Browser Source)';
+    reloadBtn.onclick = () => {
+      const frame = document.getElementById('browser-' + item.id);
+      if (frame) frame.src = frame.src;
+      // Просим оверлей (то, что реально видно на стриме) тоже перезагрузить источник
+      socket.emit('browser-control', { id: item.id, action: 'reload' });
+    };
+
+    const openBtn = document.createElement('button');
+    openBtn.textContent = '↗ Открыть'; openBtn.className = 'secondary';
+    openBtn.title = 'Открыть ссылку в новой вкладке';
+    openBtn.onclick = () => window.open(item.url, '_blank');
+
+    bControls.appendChild(reloadBtn);
+    bControls.appendChild(openBtn);
+    li.appendChild(bControls);
+  }
+
   if (item.type === 'video') {
     const vControls = document.createElement('div');
+    vControls.className = 'media-card-row';
     vControls.style.display = 'flex'; vControls.style.gap = '6px'; vControls.style.alignItems = 'center'; vControls.style.flexWrap = 'wrap';
 
     // Начать сначала — перематывает на 0 и запускает, плюс возвращает
@@ -1860,10 +2045,12 @@ function addMediaToList(item) {
       sendUpdate(item);
     }
   );
+  opacityControl.className = 'media-card-row';
   li.appendChild(opacityControl);
 
   // Поворот — доступен для любого типа объекта
   const rotationWrap = document.createElement('div');
+  rotationWrap.className = 'media-card-row';
   rotationWrap.style.display = 'flex'; rotationWrap.style.alignItems = 'center'; rotationWrap.style.gap = '4px';
 
   function setRotation(deg) {
@@ -1894,15 +2081,6 @@ function addMediaToList(item) {
   rotationWrap.appendChild(rotateRightBtn);
   li.appendChild(rotationWrap);
 
-  const btn = document.createElement('button');
-  btn.textContent = 'Убрать';
-  btn.className = 'secondary';
-  btn.onclick = () => {
-    checkpoint();
-    socket.emit('remove-media', item.id);
-    removeMediaLocal(item.id);
-  };
-  li.appendChild(btn);
   mediaListEl.appendChild(li);
 
   // Ползунки/кнопки/чекбоксы внутри строки не должны запускать
@@ -2031,12 +2209,12 @@ function renderFoldersList() {
         subLi.style.display = 'flex';
         subLi.style.justifyContent = 'space-between';
         subLi.style.alignItems = 'center';
-        subLi.style.background = '#1e1e2e';
+        subLi.style.background = '#2a1933';
         subLi.style.padding = '5px 10px';
         subLi.style.marginBottom = '4px';
         subLi.style.borderRadius = '5px';
 
-        const typeLabel = it.type === 'image' ? 'Картинка' : it.type === 'video' ? 'Видео' : it.type === 'youtube' ? 'YouTube' : it.type === 'text' ? 'Текст' : 'OBS Ninja';
+        const typeLabel = it.type === 'image' ? 'Картинка' : it.type === 'video' ? 'Видео' : it.type === 'youtube' ? 'YouTube' : it.type === 'text' ? 'Текст' : it.type === 'browser' ? 'Браузер' : 'OBS Ninja';
         const subLabel = document.createElement('span');
         subLabel.textContent = it.label ? it.label : typeLabel;
         subLabel.style.fontSize = '13px';
@@ -2071,7 +2249,7 @@ function renderFoldersList() {
     // Перетащи строку медиа-объекта сюда — попадёт в эту папку
     li.addEventListener('dragover', (e) => {
       e.preventDefault();
-      li.style.background = '#3a3a55';
+      li.style.background = '#4e315e';
     });
     li.addEventListener('dragleave', () => { li.style.background = ''; });
     li.addEventListener('drop', (e) => {
@@ -2092,7 +2270,7 @@ function renderFoldersList() {
   noFolderLi.style.fontSize = '13px';
   noFolderLi.addEventListener('dragover', (e) => {
     e.preventDefault();
-    noFolderLi.style.background = '#3a3a55';
+    noFolderLi.style.background = '#4e315e';
   });
   noFolderLi.addEventListener('dragleave', () => { noFolderLi.style.background = ''; });
   noFolderLi.addEventListener('drop', (e) => {
