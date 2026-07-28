@@ -1270,7 +1270,7 @@ function makeResizable(handle, el, item) {
       const startZoom = item.zoom || 1;
       function onZoomMove(ev) {
         const dy = zoomStartY - ev.clientY;
-        item.zoom = clamp(startZoom + dy / 150, 1, 5);
+        item.zoom = clamp(startZoom + dy / 150, 0.05, 5);
         applyCropTransform(el, item);
         sendUpdate(item);
       }
