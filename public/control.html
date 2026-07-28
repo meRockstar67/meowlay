@@ -282,6 +282,12 @@
       <div class="media-form">
         <input type="text" id="media-url" placeholder="Вставь ссылку" style="flex:1; min-width:0;">
       </div>
+      <div class="media-form" id="media-browser-proxy-row" style="display:none;">
+        <label style="display:flex; align-items:center; gap:6px; font-size:11.5px; color:#bbb;">
+          <input type="checkbox" id="media-browser-proxy">
+          🔓 Через свой прокси (для ChatIS / StreamElements и т.п. — сайтов, которые запрещают показывать себя во фрейме)
+        </label>
+      </div>
       <div class="media-form">
         <button id="add-media-btn" style="width:100%;">Добавить по ссылке</button>
       </div>
@@ -1469,11 +1475,26 @@ function getSpawnPosition() {
   return { x: 0.05 + Math.random() * 0.55, y: 1.08 };
 }
 
+// Строку с чекбоксом "через прокси" показываем только для типа "Браузер-источник"
+const mediaTypeSelect = document.getElementById('media-type');
+const browserProxyRow = document.getElementById('media-browser-proxy-row');
+function updateBrowserProxyRowVisibility() {
+  browserProxyRow.style.display = mediaTypeSelect.value === 'browser' ? '' : 'none';
+}
+mediaTypeSelect.addEventListener('change', updateBrowserProxyRowVisibility);
+updateBrowserProxyRowVisibility();
+
 document.getElementById('add-media-btn').addEventListener('click', () => {
   if (!authed) return alert('Сначала дождись подключения (правильный пароль)');
   const type = document.getElementById('media-type').value;
-  const url = document.getElementById('media-url').value.trim();
+  let url = document.getElementById('media-url').value.trim();
   if (!url) return;
+  if (type === 'browser' && document.getElementById('media-browser-proxy').checked) {
+    // Прогоняем через свой прокси-роут на сервере (см. server.js) — так сайты вроде
+    // ChatIS, которые запрещают X-Frame-Options показ себя во фрейме, всё равно
+    // откроются, потому что для браузера они будут выглядеть как ответ с твоего же домена
+    url = '/proxy?url=' + encodeURIComponent(url);
+  }
   const id = 'id' + Date.now();
   const spawn = getSpawnPosition();
   const item = { id, type, url, x: spawn.x, y: spawn.y, w: 0.4, h: 0.4, z: 9999 };
