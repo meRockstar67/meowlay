@@ -152,6 +152,23 @@
     border-radius: 20px; font-weight: 600; font-size: 12px;
   }
 
+  #online-widget {
+    position: absolute; top: 48px; right: 18px; z-index: 5;
+    background: #201625; border: 1px solid #362440; border-radius: 10px;
+    padding: 6px 10px; font-size: 12px; color: #ccc; max-width: 180px;
+  }
+  #online-widget .online-title {
+    display: flex; align-items: center; gap: 5px; font-weight: 600;
+    color: #999; margin-bottom: 4px; cursor: pointer;
+  }
+  #online-widget .online-dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; flex-shrink: 0; }
+  #online-widget .online-names { display: flex; flex-direction: column; gap: 2px; }
+  #online-widget .online-names span { color: #eee; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #online-widget .change-nick-btn {
+    margin-top: 5px; background: transparent; border: 0; color: #6d28d9;
+    font-size: 11px; cursor: pointer; padding: 0; text-decoration: underline;
+  }
+
   #canvas-viewport {
     position: relative; flex: 1; width: 100%; min-height: 0;
     overflow: hidden; touch-action: none; cursor: default;
@@ -177,11 +194,11 @@
 
   #media-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
   .media-item {
-    position: absolute; border: 2px dashed #6d28d9; pointer-events: auto; cursor: move;
+    position: absolute; outline: 2px dashed #6d28d9; outline-offset: -2px; pointer-events: auto; cursor: move;
     user-select: none; -webkit-user-select: none; -moz-user-select: none;
   }
   .media-item * { user-select: none; -webkit-user-select: none; -moz-user-select: none; -webkit-user-drag: none; }
-  .media-item.selected { border: 3px solid #ffcc00; box-shadow: 0 0 0 2px #ffcc0055; }
+  .media-item.selected { outline: 3px solid #ffcc00; outline-offset: -3px; box-shadow: 0 0 0 2px #ffcc0055; }
   .media-item img, .media-item iframe { width: 100%; height: 100%; display: block; border: 0; pointer-events: none; }
   .media-item .item-controls { position: absolute; top: -14px; right: -14px; display: flex; gap: 4px; }
   .media-item .item-btn { width: 26px; height: 26px; border-radius: 50%; background: #444; color: #fff; border: 0; font-size: 13px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
@@ -321,6 +338,11 @@
 
   <main class="workspace">
     <div id="status">Подключение...</div>
+    <div id="online-widget" style="display:none;">
+      <div class="online-title"><span class="online-dot"></span><span id="online-count">0 онлайн</span></div>
+      <div class="online-names" id="online-names"></div>
+      <button class="change-nick-btn" id="change-nick-btn">сменить ник</button>
+    </div>
 
     <div id="canvas-viewport">
       <div id="canvas-wrap">
@@ -352,9 +374,51 @@ sidebarToggleBtn.addEventListener('click', () => {
 let authed = false;
 const password = prompt('Введи пароль модератора:');
 socket.on('connect', () => socket.emit('auth', password));
-socket.on('auth-result', (ok) => {
-  if (ok) { authed = true; statusEl.textContent = '✅ Подключено'; }
-  else { statusEl.textContent = '❌ Неверный пароль. Обнови страницу и попробуй снова.'; }
+
+const onlineWidget = document.getElementById('online-widget');
+const onlineCountEl = document.getElementById('online-count');
+const onlineNamesEl = document.getElementById('online-names');
+
+function askNickname(promptText) {
+  let name = null;
+  while (!name) {
+    name = (prompt(promptText) || '').trim().slice(0, 24);
+    if (name === '') return; // не будем зацикливать, если человек нажал "Отмена"
+  }
+  socket.emit('set-nickname', name);
+}
+
+socket.on('auth-result', (result) => {
+  // Поддержка и старого формата (boolean), и нового ({ ok, nickname })
+  const ok = typeof result === 'object' ? result.ok : result;
+  if (!ok) {
+    statusEl.textContent = '❌ Неверный пароль. Обнови страницу и попробуй снова.';
+    return;
+  }
+  authed = true;
+  const nickname = typeof result === 'object' ? result.nickname : null;
+  if (nickname) {
+    statusEl.textContent = '✅ Подключено как ' + nickname;
+    onlineWidget.style.display = '';
+  } else {
+    // Первый заход с этого IP — просим придумать ник, дальше он будет
+    // подставляться сам без повторного ввода
+    askNickname('Придумай ник (будет виден в списке онлайн):');
+  }
+});
+
+socket.on('nickname-set', (nickname) => {
+  statusEl.textContent = '✅ Подключено как ' + nickname;
+  onlineWidget.style.display = '';
+});
+
+socket.on('online-list', (names) => {
+  onlineCountEl.textContent = names.length + ' онлайн';
+  onlineNamesEl.innerHTML = names.map((n) => '<span>' + n.replace(/</g, '&lt;') + '</span>').join('');
+});
+
+document.getElementById('change-nick-btn').addEventListener('click', () => {
+  askNickname('Новый ник:');
 });
 
 // Вызывается ПЕРЕД любым значимым действием — сервер сохранит снимок
