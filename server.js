@@ -12,7 +12,9 @@ const app = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  maxHttpBufferSize: 25 * 1024 * 1024
+  maxHttpBufferSize: 25 * 1024 * 1024,
+  pingInterval: 10000, // раньше проверяем, жив ли клиент
+  pingTimeout: 8000    // раньше признаём соединение мёртвым и рвём его
 });
 
 const PASSWORD = process.env.MOD_PASSWORD || 'meowh0cki2026';
