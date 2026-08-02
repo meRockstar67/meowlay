@@ -95,6 +95,26 @@ let mediaItems = {};   // id -> {id, type, url, x, y, w, h, z, zoom, offsetX, of
 let history = [];      // [{ id, kind: 'stroke'|'shape'|'text', ... }]
 let folders = {};      // id -> { id, name, memberIds: [] }
 let nextZ = 1;
+let nicknamesByIp = {}; // ip -> nickname, сохраняется на диск вместе с остальным state
+
+// Кто сейчас реально онлайн (только в памяти, не сохраняется на диск —
+// список должен отражать актуальные соединения, а не переживать рестарт)
+const onlineUsers = {}; // socket.id -> { nickname, ip }
+
+function getClientIp(socket) {
+  // Render стоит за прокси — реальный IP клиента приходит в заголовке,
+  // socket.handshake.address без этого будет адресом самого Render
+  const fwd = socket.handshake.headers['x-forwarded-for'];
+  if (fwd) return fwd.split(',')[0].trim();
+  return socket.handshake.address;
+}
+
+function broadcastOnlineList() {
+  // Уникальные ники (если один и тот же человек открыл несколько вкладок —
+  // в списке он всё равно один)
+  const names = [...new Set(Object.values(onlineUsers).map(u => u.nickname))];
+  io.emit('online-list', names);
+}
 
 // --- Сохранение состояния на диск (переживает "засыпание" сервера, но
 // стирается при полном редеплое — так было и раньше, это особенность
@@ -109,6 +129,7 @@ function loadState() {
     history = data.history || [];
     folders = data.folders || {};
     nextZ = data.nextZ || 1;
+    nicknamesByIp = data.nicknamesByIp || {};
     console.log('Состояние восстановлено из файла (' + Object.keys(mediaItems).length + ' медиа-объектов)');
   } catch (e) {
     console.log('Сохранённого состояния не найдено — начинаем с чистого листа');
@@ -121,7 +142,7 @@ function saveStateDebounced() {
   saveTimeout = setTimeout(() => {
     try {
       fs.mkdirSync(path.dirname(STATE_FILE), { recursive: true });
-      fs.writeFileSync(STATE_FILE, JSON.stringify({ mediaItems, history, folders, nextZ }));
+      fs.writeFileSync(STATE_FILE, JSON.stringify({ mediaItems, history, folders, nextZ, nicknamesByIp }));
     } catch (e) {
       console.error('Не удалось сохранить состояние:', e.message);
     }
@@ -190,14 +211,43 @@ function removeItemFromAllFolders(itemId) {
 
 io.on('connection', (socket) => {
   let authed = false;
+  const clientIp = getClientIp(socket);
 
   socket.on('auth', (pass) => {
-    if (pass === PASSWORD) {
-      authed = true;
-      socket.emit('auth-result', true);
-      socket.emit('state', { media: mediaItems, history, folders });
+    if (pass !== PASSWORD) {
+      socket.emit('auth-result', { ok: false });
+      return;
+    }
+    authed = true;
+    socket.emit('state', { media: mediaItems, history, folders });
+
+    const savedNickname = nicknamesByIp[clientIp];
+    if (savedNickname) {
+      // Ник уже закреплён за этим IP раньше — вводить заново не нужно
+      onlineUsers[socket.id] = { nickname: savedNickname, ip: clientIp };
+      socket.emit('auth-result', { ok: true, nickname: savedNickname });
+      broadcastOnlineList();
     } else {
-      socket.emit('auth-result', false);
+      // Пароль верный, но ника ещё нет — клиент должен спросить и прислать 'set-nickname'
+      socket.emit('auth-result', { ok: true, nickname: null });
+    }
+  });
+
+  socket.on('set-nickname', (name) => {
+    if (!authed) return;
+    const nickname = String(name || '').trim().slice(0, 24);
+    if (!nickname) return;
+    nicknamesByIp[clientIp] = nickname;
+    onlineUsers[socket.id] = { nickname, ip: clientIp };
+    socket.emit('nickname-set', nickname);
+    broadcastOnlineList();
+    saveStateDebounced();
+  });
+
+  socket.on('disconnect', () => {
+    if (onlineUsers[socket.id]) {
+      delete onlineUsers[socket.id];
+      broadcastOnlineList();
     }
   });
 
