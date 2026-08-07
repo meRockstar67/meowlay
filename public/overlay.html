@@ -51,10 +51,22 @@ setInterval(() => {
 }, 15000);
 
 socket.on('state', (state) => {
-  // Полностью пересобираем сцену с нуля — важно для Ctrl+Z: объекты,
-  // которых больше нет в новом состоянии, должны реально исчезнуть
-  mediaLayer.innerHTML = '';
-  for (const k in mediaCache) delete mediaCache[k];
+  // Раньше здесь сцена сносилась и пересобиралась с нуля целиком — это и
+  // ломало YouTube/видео: пересоздание iframe/<video> = видео стартует заново.
+  // Периодический ресинк (см. overlay-join выше) прилетает каждые 15 сек,
+  // поэтому видео перезапускалось примерно с той же частотой.
+  // Теперь убираем только те элементы, которых реально больше нет в новом
+  // состоянии (важно для Ctrl+Z и удаления), а всё остальное просто
+  // обновляем на месте — createOrUpdateMedia не трогает src существующих
+  // iframe/<video>, если элемент уже существует.
+  const newIds = new Set(Object.keys(state.media || {}));
+  for (const id in mediaCache) {
+    if (!newIds.has(id)) {
+      const el = document.getElementById('m-' + id);
+      if (el) el.remove();
+      delete mediaCache[id];
+    }
+  }
   Object.values(state.media).forEach(createOrUpdateMedia);
   historyList = state.history || [];
   replayHistory();
