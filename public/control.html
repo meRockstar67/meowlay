@@ -1148,7 +1148,13 @@ function createOrUpdateMedia(item) {
       textDiv.style.userSelect = 'none';
       inner.appendChild(textDiv);
     } else if (item.type === 'youtube') {
-      inner.innerHTML = '<iframe src="https://www.youtube.com/embed/' + item.videoId + '"></iframe>';
+      // Автоплей приглушённым — чтобы на модер-панели тоже было видно
+      // "живое" видео (на каком моменте оно сейчас), а не статичную заглушку.
+      // Звук на панели специально не включаем, это просто визуальный превью.
+      const panelOrigin = encodeURIComponent(location.origin);
+      inner.innerHTML = '<iframe id="cmyt-' + item.id + '" src="https://www.youtube.com/embed/' +
+        item.videoId + '?autoplay=1&mute=1&enablejsapi=1&cc_load_policy=0&iv_load_policy=3&origin=' + panelOrigin +
+        '" allow="autoplay; encrypted-media" allowfullscreen></iframe>';
     } else if (item.type === 'browser') {
       // Как Browser Source в OBS: просто грузим произвольный сайт в iframe.
       // На холсте модератора он тоже виден "живьём" (перетаскивание работает
@@ -1241,6 +1247,23 @@ function createOrUpdateMedia(item) {
           }
         });
       }
+    }
+
+    if (item.type === 'youtube') {
+      // Так же, как в оверлее: несколько раз досылаем play/mute, т.к. плеер
+      // не всегда готов принять команду сразу после создания iframe
+      const sendPanelYtCommand = (func, args) => {
+        const iframe = document.getElementById('cmyt-' + item.id);
+        if (iframe && iframe.contentWindow) {
+          iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func, args: args || [] }), '*');
+        }
+      };
+      [400, 1000, 2000, 3500].forEach((delay) => {
+        setTimeout(() => {
+          sendPanelYtCommand('mute');
+          sendPanelYtCommand('playVideo');
+        }, delay);
+      });
     }
 
     mediaLayer.appendChild(el);

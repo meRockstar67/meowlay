@@ -202,6 +202,14 @@ function applyPosition(el, item) {
 function applyHiddenState(el, item) {
   el.style.display = item.hidden ? 'none' : '';
   el.style.opacity = (item.opacity !== undefined ? item.opacity : 100) / 100;
+  // applyPosition() вызывает эту функцию на КАЖДОЕ обновление позиции (в том
+  // числе десятки раз за одно перетаскивание). Раньше это на каждый такой
+  // вызов слало YouTube-плееру playVideo/pauseVideo, даже если видимость не
+  // менялась — из-за этого при частом перетаскивании видео иногда сбрасывалось
+  // и стартовало заново. Теперь шлём команду плееру только когда hidden
+  // реально изменился с прошлого раза.
+  const hiddenChanged = el.dataset.hiddenState !== String(item.hidden);
+  el.dataset.hiddenState = String(item.hidden);
   if (item.type === 'video') {
     const v = document.getElementById('vid-' + item.id);
     if (v) {
@@ -213,6 +221,7 @@ function applyHiddenState(el, item) {
       }
     }
   } else if (item.type === 'youtube') {
+    if (!hiddenChanged) return;
     const iframe = document.getElementById('yt-' + item.id);
     if (iframe && iframe.contentWindow) {
       const func = item.hidden ? 'pauseVideo' : 'playVideo';
@@ -284,7 +293,7 @@ function createOrUpdateMedia(item) {
     } else if (item.type === 'youtube') {
       const origin = encodeURIComponent(location.origin);
       inner.innerHTML = '<iframe id="yt-' + item.id + '" src="https://www.youtube.com/embed/' +
-        item.videoId + '?autoplay=1&mute=1&enablejsapi=1&origin=' + origin +
+        item.videoId + '?autoplay=1&mute=1&enablejsapi=1&cc_load_policy=0&iv_load_policy=3&origin=' + origin +
         '" allow="autoplay; encrypted-media" allowfullscreen></iframe>';
     } else if (item.type === 'browser') {
       // Как Browser Source в OBS — просто произвольный сайт в iframe поверх сцены
