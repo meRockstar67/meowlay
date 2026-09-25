@@ -17,7 +17,7 @@ const io = new Server(server, {
   pingTimeout: 8000    // раньше признаём соединение мёртвым и рвём его
 });
 
-const PASSWORD = process.env.MOD_PASSWORD || 'meowh0cki2026';
+const PASSWORD = process.env.MOD_PASSWORD || '6767';
 
 app.use(express.static(path.join(__dirname, 'public')));
 
