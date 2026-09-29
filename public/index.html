@@ -660,7 +660,7 @@
 <script>
 // ТЕСТОВЫЙ РЕЖИМ: без пароля и без ника. Если сервера нет (файл открыт
 // локально), работает без сети — всё двигается, но изменения никуда не уходят.
-const TEST_MODE = true;
+const TEST_MODE = false;
 const OFFLINE = typeof io === 'undefined';
 function createOfflineSocket() {
   const handlers = {};
