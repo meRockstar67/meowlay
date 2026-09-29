@@ -2,172 +2,392 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Панель модератора — meowh0cki overlay</title>
+<title>Панель модератора — meowlay</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+  :root {
+    --ink-0: #191a25;
+    --ink-1: #202232;
+    --ink-2: #2a2c3f;
+    --ink-3: #35384f;
+    --line: #2e3146;
+    --stage: #14151e;
+    --text: #ecebf5;
+    --muted: #9a9cb4;
+    --faint: #6c6f88;
+    --accent: #ff7aa2;
+    --accent-hover: #ff93b4;
+    --accent-ink: #2b0d19;
+    --accent-soft: rgba(255, 122, 162, 0.14);
+    --live: #5fe0b7;
+    --warn: #ffc861;
+    --danger: #ff6b6b;
+    --danger-soft: rgba(255, 107, 107, 0.12);
+    --panel-w: 320px;
+    --rail-w: 68px;
+    --r-lg: 12px;
+    --r-md: 8px;
+    --r-sm: 6px;
+  }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
   body {
-    font-family: 'Segoe UI', sans-serif; background: #160d1b; color: #eee;
-    margin: 0; overflow: hidden;
+    font-family: 'Onest', 'Segoe UI', system-ui, sans-serif;
+    background: var(--ink-0); color: var(--text);
+    margin: 0; overflow: hidden; font-size: 13px; line-height: 1.4;
+    font-feature-settings: 'tnum' 1;
   }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
   .app-shell { display: flex; height: 100vh; width: 100vw; position: relative; }
 
-  /* --- Сайдбар --- */
-  .sidebar {
-    width: 250px; flex-shrink: 0; background: #17101b; border-right: 1px solid #2b1e32;
-    display: flex; flex-direction: column; padding: 10px; gap: 8px;
-    overflow-y: auto; font-size: 12.5px;
-    transition: width 0.18s ease, padding 0.18s ease, border-color 0.18s ease;
-  }
-  .sidebar::-webkit-scrollbar { width: 6px; }
-  .sidebar::-webkit-scrollbar-thumb { background: #362440; border-radius: 4px; }
-
-  body.sidebar-collapsed .sidebar {
-    width: 0; padding: 0; border-color: transparent; overflow: hidden;
-  }
-
-  /* --- Кнопка скрыть/показать боковую панель --- */
-  #sidebar-toggle-btn {
-    position: fixed; top: 14px; left: 258px; z-index: 50;
-    width: 26px; height: 26px; padding: 0; border-radius: 50%;
-    background: #201625; border: 1px solid #362440; color: #ccc;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 12px; cursor: pointer; transition: left 0.18s ease;
-  }
-  #sidebar-toggle-btn:hover { background: #2c1f33; }
-  body.sidebar-collapsed #sidebar-toggle-btn { left: 8px; }
-
-  .brand { display: flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 700; padding: 2px 2px 4px 2px; }
-  .brand .brand-icon {
-    width: 22px; height: 22px; border-radius: 6px; background: #6d28d9;
-    display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0;
-  }
-
-  .side-section { background: #201625; border-radius: 8px; padding: 9px; }
-  .side-section h3 {
-    margin: 0 0 7px 0; text-align: left; font-size: 10px; letter-spacing: 0.07em;
-    text-transform: uppercase; color: #8d729c; font-weight: 600;
-  }
-
-  h2 { margin: 0; text-align: center; }
-  .toolbar { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; justify-content: flex-start; margin-bottom: 6px; }
-  .toolbar:last-child { margin-bottom: 0; }
+  /* --- Базовые контролы --- */
   button {
-    background: #6d28d9; color: #fff; border: 0; padding: 6px 9px; border-radius: 6px;
-    cursor: pointer; font-size: 12px;
+    font: inherit; font-size: 12.5px; font-weight: 500;
+    background: var(--accent); color: var(--accent-ink);
+    border: 0; padding: 7px 11px; border-radius: var(--r-md); cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease;
   }
-  button.secondary { background: #2c1f33; }
-  button.tool-btn { background: #261a2d; }
-  button.tool-btn.active { background: #6d28d9; }
+  button:hover { background: var(--accent-hover); }
+  button.secondary { background: var(--ink-2); color: var(--text); }
+  button.secondary:hover { background: var(--ink-3); }
+  button:disabled { opacity: 0.4; cursor: default; }
+  button.danger { background: var(--danger-soft); color: var(--danger); }
+  button.danger:hover { background: rgba(255, 107, 107, 0.22); }
+  button.ghost { background: transparent; color: var(--muted); }
+  button.ghost:hover { background: var(--ink-2); color: var(--text); }
+
   input, select {
-    padding: 5px 7px; border-radius: 6px; border: 1px solid #362440; background: #1a111f; color: #eee;
-    font-size: 12px;
+    font: inherit; font-size: 12.5px;
+    padding: 7px 9px; border-radius: var(--r-md);
+    border: 1px solid var(--line); background: var(--ink-0); color: var(--text);
   }
-  .media-form { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-start; margin-bottom: 6px; }
-  .media-form:last-child { margin-bottom: 0; }
+  input::placeholder { color: var(--faint); }
+  input:focus, select:focus { border-color: var(--accent); outline: none; }
+  input[type="range"] { padding: 0; border: 0; background: transparent; accent-color: var(--accent); height: 18px; }
+  input[type="color"] { padding: 2px; width: 34px; height: 30px; cursor: pointer; }
+  input[type="checkbox"] { accent-color: var(--accent); }
 
-  .tools-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 6px; }
-  .tools-grid button { width: 100%; padding: 6px 4px; }
+  .row { display: flex; gap: 6px; align-items: center; }
+  .row > .grow { flex: 1; min-width: 0; }
+  .stack { display: flex; flex-direction: column; gap: 8px; }
+  .full { width: 100%; }
+  .muted { color: var(--muted); }
+  .note { font-size: 11.5px; color: var(--faint); }
 
-  #elements-list { list-style: none; padding: 0; margin: 0 0 6px 0; max-height: 280px; overflow-y: auto; }
-  #elements-list::-webkit-scrollbar { width: 5px; }
-  #elements-list::-webkit-scrollbar-thumb { background: #3c2846; border-radius: 3px; }
-  .element-row {
-    display: flex; align-items: center; gap: 6px; padding: 4px 5px; border-radius: 6px;
-    margin-bottom: 1px; cursor: pointer; border: 1px solid transparent;
+  /* Переключатель-тумблер (обёртка вокруг обычного checkbox) */
+  .switch { display: flex; align-items: center; gap: 9px; cursor: pointer; font-size: 12.5px; color: var(--text); user-select: none; }
+  .switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .switch .track {
+    width: 30px; height: 18px; border-radius: 999px; background: var(--ink-3);
+    position: relative; flex-shrink: 0; transition: background 0.15s ease;
   }
-  .element-row:hover { background: #281b2f; }
-  .element-row.selected { background: #3d1d4e; border-color: #6d28d9; }
-  .element-row .drag-handle { color: #666; cursor: grab; flex-shrink: 0; }
-  .element-thumb {
-    width: 20px; height: 20px; border-radius: 4px; background: #302138; flex-shrink: 0;
-    background-size: cover; background-position: center; display: flex; align-items: center;
-    justify-content: center; font-size: 11px;
+  .switch .track::after {
+    content: ''; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px;
+    border-radius: 50%; background: var(--text); transition: transform 0.15s ease;
   }
-  .element-name {
-    flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    font-size: 12px;
+  .switch input:checked + .track { background: var(--accent); }
+  .switch input:checked + .track::after { transform: translateX(12px); background: var(--accent-ink); }
+  .switch input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* --- Левая рейка с вкладками --- */
+  .rail {
+    width: var(--rail-w); flex-shrink: 0; background: var(--ink-0);
+    border-right: 1px solid var(--line);
+    display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 0;
   }
-  .element-layer-btns {
-    display: flex; flex-direction: column; flex-shrink: 0; line-height: 0;
+  .rail .brand {
+    width: 40px; height: 40px; border-radius: var(--r-lg); background: var(--accent);
+    color: var(--accent-ink); display: flex; align-items: center; justify-content: center;
+    margin-bottom: 10px;
   }
-  .element-layer-btns button {
-    background: transparent; border: 0; color: #888; font-size: 8px; padding: 0;
-    width: 14px; height: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  .rail .brand svg { width: 22px; height: 22px; }
+  .rail-tab {
+    width: 56px; padding: 8px 0 6px; border-radius: var(--r-lg);
+    background: transparent; color: var(--muted);
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    font-size: 10.5px; font-weight: 500;
   }
-  .element-layer-btns button:hover:not(:disabled) { color: #eee; }
-  .element-layer-btns button:disabled { color: #3a3a45; cursor: default; }
-  .element-hide-btn {
-    background: transparent; border: 0; color: #888; font-size: 12px; padding: 2px 3px;
-    flex-shrink: 0; cursor: pointer;
+  .rail-tab svg { width: 20px; height: 20px; }
+  .rail-tab:hover { background: var(--ink-1); color: var(--text); }
+  .rail-tab.active { background: var(--accent-soft); color: var(--accent); }
+  .rail-spacer { flex: 1; }
+  #sidebar-toggle-btn {
+    width: 56px; padding: 8px 0 6px; border-radius: var(--r-lg);
+    background: transparent; color: var(--muted); font-size: 14px;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
   }
-  .elements-footer { display: flex; align-items: center; gap: 5px; }
+  #sidebar-toggle-btn::after { content: 'Скрыть'; font-size: 10.5px; font-weight: 500; }
+  #panel-hide-btn {
+    position: absolute; top: 14px; right: 12px; z-index: 5;
+    width: 30px; height: 30px; padding: 0; border-radius: var(--r-md);
+    background: transparent; color: var(--muted); font-size: 16px;
+  }
+  #panel-hide-btn:hover { background: var(--ink-2); color: var(--text); }
+  #sidebar-toggle-btn:hover { background: var(--ink-1); color: var(--text); }
+
+  /* --- Панель вкладки --- */
+  .sidebar {
+    width: var(--panel-w); flex-shrink: 0; background: var(--ink-1);
+    border-right: 1px solid var(--line);
+    display: flex; flex-direction: column; position: relative; min-height: 0;
+  }
+  body.sidebar-collapsed .sidebar, body.sidebar-collapsed .rail { display: none; }
+  #show-ui-btn {
+    display: none; position: absolute; top: 14px; left: 14px; z-index: 6;
+    height: 34px; padding: 0 12px; border-radius: 999px; gap: 6px; align-items: center;
+    background: var(--ink-1); color: var(--text); border: 1px solid var(--line); font-size: 12.5px;
+  }
+  #show-ui-btn:hover { background: var(--ink-3); }
+  body.sidebar-collapsed #show-ui-btn { display: flex; }
+  .sidebar::-webkit-scrollbar, .sidebar *::-webkit-scrollbar { width: 6px; }
+  .sidebar *::-webkit-scrollbar-thumb { background: var(--ink-3); border-radius: 4px; }
+
+  .resizer {
+    position: absolute; top: 0; right: -4px; width: 8px; height: 100%;
+    cursor: col-resize; z-index: 20;
+  }
+  .resizer::after {
+    content: ''; position: absolute; top: 0; bottom: 0; left: 3px; width: 2px;
+    background: transparent; transition: background 0.12s ease;
+  }
+  .resizer:hover::after, body.resizing .resizer::after { background: var(--accent); }
+  body.resizing { cursor: col-resize; user-select: none; }
+  body.resizing iframe { pointer-events: none !important; }
+
+  .pane { display: none; flex-direction: column; min-height: 0; flex: 1; }
+  .pane.active { display: flex; }
+  .pane-head { padding: 16px 16px 10px; }
+  .pane-head h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
+  .pane-body { padding: 0 16px 16px; overflow-y: auto; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 14px; }
+
+  .group { display: flex; flex-direction: column; gap: 8px; }
+  .group-title { font-size: 12px; font-weight: 600; color: var(--muted); }
+  .divider { height: 1px; background: var(--line); margin: 2px 0; }
+
+  /* --- Вкладка "Слои" --- */
+  .layers-pane .pane-body { gap: 0; padding: 0; overflow: hidden; }
+  .elements-footer { display: flex; align-items: center; gap: 6px; padding: 0 16px 10px; }
   .elements-footer input { flex: 1; min-width: 0; }
-  .elements-footer button { flex-shrink: 0; padding: 5px 8px; }
-  .elements-empty { color: #695674; font-size: 11.5px; text-align: center; padding: 8px 0; }
+  .elements-footer button { flex-shrink: 0; width: 32px; height: 32px; padding: 0; font-size: 15px; }
 
-  #media-list { max-height: 460px; overflow-y: auto; padding-right: 2px; }
-  #media-list::-webkit-scrollbar { width: 5px; }
-  #media-list::-webkit-scrollbar-thumb { background: #3c2846; border-radius: 3px; }
-  .media-card {
-    display: flex; flex-direction: column; gap: 6px;
-    background: #231729; border: 1px solid #2c2033; border-radius: 8px;
-    padding: 8px; margin-bottom: 6px; font-size: 12px; cursor: grab;
+  #elements-list {
+    list-style: none; padding: 0 10px 10px; margin: 0;
+    max-height: 38vh; overflow-y: auto; border-bottom: 1px solid var(--line);
   }
-  .media-card:hover { border-color: #442b52; }
-  .media-card.dragging { opacity: 0.4; }
+  .element-row {
+    display: flex; align-items: center; gap: 8px; padding: 6px 6px; border-radius: var(--r-md);
+    cursor: pointer; border: 1px solid transparent;
+  }
+  .element-row + .element-row { margin-top: 2px; }
+  .element-row:hover { background: var(--ink-2); }
+  .element-row.selected { background: var(--accent-soft); border-color: rgba(255, 122, 162, 0.45); }
+  .element-row.is-hidden .element-name, .element-row.is-hidden .element-thumb { opacity: 0.45; }
+  .element-row .drag-handle { display: none; }
+  .element-thumb {
+    width: 30px; height: 30px; border-radius: var(--r-sm); background: var(--ink-3); flex-shrink: 0;
+    background-size: cover; background-position: center; display: flex; align-items: center;
+    justify-content: center; font-size: 14px;
+  }
+  .element-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12.5px; }
+  .element-quick {
+    flex-shrink: 0; width: 26px; height: 26px; padding: 0; border-radius: 50%;
+    background: var(--ink-3); color: var(--text); font-size: 10px;
+  }
+  .element-quick:hover { background: var(--accent); color: var(--accent-ink); }
+  .element-quick.playing { background: var(--live); color: #0d2a21; }
+  .element-layer-btns { display: flex; flex-direction: column; flex-shrink: 0; line-height: 0; }
+  .element-layer-btns button {
+    background: transparent; border: 0; color: var(--faint); font-size: 8px; padding: 0;
+    width: 16px; height: 12px; display: flex; align-items: center; justify-content: center; border-radius: 3px;
+  }
+  .element-layer-btns button:hover:not(:disabled) { color: var(--text); background: var(--ink-3); }
+  .element-layer-btns button:disabled { color: var(--ink-3); background: transparent; }
+  .element-hide-btn {
+    background: transparent; border: 0; color: var(--muted); font-size: 13px; padding: 3px 4px;
+    flex-shrink: 0; border-radius: var(--r-sm);
+  }
+  .element-hide-btn:hover { background: var(--ink-3); }
+  .elements-empty { color: var(--faint); font-size: 12px; text-align: center; padding: 18px 8px; list-style: none; }
+
+  .inspector { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px 16px; }
+  .inspector-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
+  .inspector-head .group-title { margin: 0; }
+  .inspector-empty {
+    border: 1px dashed var(--ink-3); border-radius: var(--r-lg); padding: 22px 16px;
+    text-align: center; color: var(--faint); font-size: 12.5px; line-height: 1.5;
+  }
+
+  /* --- Карточка выбранного объекта (инспектор) --- */
+  #media-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+  .media-card {
+    display: none; flex-direction: column; gap: 12px;
+    background: var(--ink-0); border: 1px solid var(--line); border-radius: var(--r-lg);
+    padding: 12px; font-size: 12.5px;
+  }
+  .media-card.is-open { display: flex; }
   .media-card-header { display: flex; align-items: center; gap: 6px; }
-  .media-card-header .drag-handle { cursor: grab; color: #666; flex-shrink: 0; }
+  .media-card-header .drag-handle { display: none; }
   .media-card-name {
     flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    font-weight: 600; font-size: 12.5px;
+    font-weight: 650; font-size: 14px;
   }
-  .media-card-header button { flex-shrink: 0; padding: 4px 7px; font-size: 12px; }
-  .media-card-remove { background: #3a2020 !important; color: #ff8080; }
-  .media-card-remove:hover { background: #4a2626 !important; }
+  .media-card-header button { flex-shrink: 0; width: 30px; height: 30px; padding: 0; font-size: 12px; }
+  .media-card-remove { background: var(--danger-soft) !important; color: var(--danger) !important; }
+  .media-card-remove:hover { background: rgba(255, 107, 107, 0.22) !important; }
   .media-card .folder-select { width: 100%; }
-  .media-card-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .media-card-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .media-card-stack { display: flex; flex-direction: column; gap: 12px; }
 
-  #folders-panel { padding: 0; background: transparent; }
-  #folders-list { list-style: none; padding: 0; margin: 6px 0 0 0; }
-  #folders-list li {
-    display: flex; justify-content: space-between; align-items: center;
-    background: #271b2e; padding: 5px 8px; margin-bottom: 3px; border-radius: 6px; font-size: 12px;
+  .vc-transport { display: grid; grid-template-columns: 38px 1.35fr 1fr; gap: 6px; }
+  .vc-transport button { height: 38px; padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .media-card .pc { flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 4px; }
+  .vc-transport .vc-main { font-size: 13.5px; font-weight: 600; }
+  .yt-transport { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .yt-transport button { height: 36px; }
+  .yt-transport.three { grid-template-columns: 1fr 1fr 1fr; }
+  .yt-transport.three button { padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .text-edit {
+    width: 100%; resize: vertical; min-height: 44px; font: inherit; font-size: 13px;
+    padding: 8px 10px; border-radius: var(--r-md); border: 1px solid var(--line);
+    background: var(--ink-1); color: var(--text);
+  }
+  .text-edit:focus { border-color: var(--accent); outline: none; }
+
+  /* Перетаскивание слоёв мышкой */
+  .element-row.drop-before { box-shadow: inset 0 2px 0 var(--accent); }
+  .element-row.drop-after { box-shadow: inset 0 -2px 0 var(--accent); }
+  .element-row.dragging-row { opacity: 0.4; }
+  .element-row { cursor: grab; }
+
+  #shape-preview {
+    position: absolute; z-index: 3; pointer-events: none;
+    border: 2px dashed var(--accent); background: rgba(255, 122, 162, 0.08);
+  }
+
+  /* Таймер */
+  .timer-fields { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 6px; align-items: end; }
+  .timer-fields label { display: flex; flex-direction: column; gap: 3px; font-size: 11.5px; color: var(--muted); }
+  .timer-fields input[type="number"] { width: 100%; min-width: 0; text-align: center; font-size: 15px; font-weight: 600; padding: 7px 4px; }
+  .timer-fields input[type="color"] { height: 36px; width: 40px; }
+  .timer-actions { display: grid; grid-template-columns: 1.4fr 1fr; gap: 6px; }
+  .timer-actions button { height: 36px; }
+
+  /* Таймлайн видео */
+  .tl { display: flex; flex-direction: column; gap: 4px; }
+  .tl-head { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+  .tl-head .tl-cur { color: var(--text); font-weight: 600; }
+  .tl-body { display: flex; align-items: center; gap: 6px; }
+  .tl-body input[type="range"] { flex: 1; min-width: 0; }
+  .tl-body button { flex-shrink: 0; height: 26px; padding: 0 7px; font-size: 11px; border-radius: 999px; }
+
+  /* Контрол "минус / ползунок / плюс" */
+  .pc { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+  .pc-head { display: flex; justify-content: space-between; align-items: baseline; }
+  .pc-label { font-size: 12px; color: var(--muted); }
+  .pc-val { font-size: 12px; font-weight: 600; color: var(--text); }
+  .pc-body { display: flex; align-items: center; gap: 6px; }
+  .pc-body input[type="range"] { flex: 1; min-width: 0; }
+  .pc-step {
+    width: 26px; height: 26px; padding: 0; border-radius: 50%; flex-shrink: 0;
+    background: var(--ink-2); color: var(--text); font-size: 14px; line-height: 1;
+  }
+  .pc-step:hover { background: var(--ink-3); }
+  .rot-row { display: flex; align-items: flex-end; gap: 8px; }
+  .rot-row > button { flex-shrink: 0; height: 30px; }
+
+  /* --- Вкладка "Добавить" --- */
+  .segmented { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; background: var(--ink-0); padding: 4px; border-radius: var(--r-lg); }
+  .segmented button { background: transparent; color: var(--muted); padding: 8px 6px; border-radius: var(--r-md); }
+  .segmented button:hover { background: var(--ink-2); color: var(--text); }
+  .segmented button.active { background: var(--ink-3); color: var(--text); }
+  .dropzone {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    border: 1.5px dashed var(--ink-3); border-radius: var(--r-lg); padding: 24px 12px;
+    text-align: center; cursor: pointer; color: var(--muted); transition: border-color 0.12s ease, background 0.12s ease;
+  }
+  .dropzone svg { width: 26px; height: 26px; color: var(--accent); }
+  .dropzone strong { color: var(--text); font-weight: 600; font-size: 13px; }
+  .dropzone:hover, .dropzone.over { border-color: var(--accent); background: var(--accent-soft); }
+  .or { display: flex; align-items: center; gap: 10px; color: var(--faint); font-size: 11.5px; }
+  .or::before, .or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+
+  /* --- Вкладка "Рисовать" --- */
+  .tools-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .tools-grid button {
+    display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px;
+    font-size: 11.5px;
+  }
+  .tools-grid button svg { width: 18px; height: 18px; }
+  button.tool-btn { background: var(--ink-2); color: var(--muted); }
+  button.tool-btn:hover { background: var(--ink-3); color: var(--text); }
+  button.tool-btn.active { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 1px rgba(255, 122, 162, 0.5); }
+  .swatches { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .swatch { width: 24px; height: 24px; padding: 0; border-radius: 50%; border: 2px solid var(--ink-1); box-shadow: 0 0 0 1px var(--ink-3); }
+  .swatch:hover { box-shadow: 0 0 0 2px var(--text); }
+
+  /* --- Вкладка "Папки" --- */
+  #folders-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+  .folder { background: var(--ink-0); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 8px; }
+  .folder.drop-over, .folder-drop.drop-over { border-color: var(--accent); background: var(--accent-soft); }
+  .folder-top { display: flex; align-items: center; gap: 6px; }
+  .folder-top .folder-name { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .folder-top .folder-count { color: var(--faint); font-weight: 400; margin-left: 4px; }
+  .folder-top button { flex-shrink: 0; width: 28px; height: 28px; padding: 0; }
+  .folder-actions { display: flex; gap: 6px; margin-top: 8px; }
+  .folder-actions button { flex: 1; padding: 6px 4px; font-size: 12px; }
+  .folder-items { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 4px; }
+  .folder-item { display: flex; align-items: center; gap: 6px; padding: 5px 6px 5px 10px; background: var(--ink-2); border-radius: var(--r-md); }
+  .folder-item span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .folder-item button { padding: 4px 8px; font-size: 11.5px; }
+  .folder-empty { color: var(--faint); padding: 4px 2px; font-size: 12px; }
+  .folder-drop {
+    border: 1.5px dashed var(--ink-3); border-radius: var(--r-lg); padding: 12px;
+    text-align: center; color: var(--faint); font-size: 12px; list-style: none;
   }
 
   /* --- Рабочая область --- */
   .workspace {
     flex: 1; min-width: 0; display: flex; flex-direction: column;
-    padding: 14px 18px; overflow-y: auto; position: relative;
-    background-color: #100a14;
-    background-image: radial-gradient(circle, #2d1e3566 1.4px, transparent 1.4px);
+    padding: 14px; overflow: hidden; position: relative;
+    background-color: var(--stage);
+    background-image: radial-gradient(circle, rgba(154, 156, 180, 0.12) 1.2px, transparent 1.3px);
     background-size: 22px 22px;
   }
 
   #status {
-    position: absolute; top: 14px; right: 18px; z-index: 5;
-    background: #201625; border: 1px solid #362440; padding: 5px 12px;
-    border-radius: 20px; font-weight: 600; font-size: 12px;
+    position: absolute; top: 14px; right: 14px; z-index: 5;
+    background: var(--ink-1); border: 1px solid var(--line); padding: 6px 12px;
+    border-radius: 999px; font-weight: 600; font-size: 12px;
+  }
+  #online-widget {
+    position: absolute; top: 50px; right: 14px; z-index: 5;
+    background: var(--ink-1); border: 1px solid var(--line); border-radius: var(--r-lg);
+    padding: 8px 12px; font-size: 12px; color: var(--muted); max-width: 200px;
+  }
+  #online-widget .online-title { display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  #online-widget .online-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--live); flex-shrink: 0; box-shadow: 0 0 0 3px rgba(95, 224, 183, 0.18); }
+  #online-widget .online-names { display: flex; flex-direction: column; gap: 2px; }
+  #online-widget .online-names span { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #online-widget .change-nick-btn {
+    margin-top: 6px; background: transparent; border: 0; color: var(--accent);
+    font-size: 11.5px; padding: 0; text-decoration: underline; text-underline-offset: 2px;
   }
 
-  #online-widget {
-    position: absolute; top: 48px; right: 18px; z-index: 5;
-    background: #201625; border: 1px solid #362440; border-radius: 10px;
-    padding: 6px 10px; font-size: 12px; color: #ccc; max-width: 180px;
+  .zoom-bar {
+    position: absolute; bottom: 14px; right: 14px; z-index: 5;
+    display: flex; align-items: center; gap: 2px; padding: 4px;
+    background: var(--ink-1); border: 1px solid var(--line); border-radius: 999px;
   }
-  #online-widget .online-title {
-    display: flex; align-items: center; gap: 5px; font-weight: 600;
-    color: #999; margin-bottom: 4px; cursor: pointer;
-  }
-  #online-widget .online-dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; flex-shrink: 0; }
-  #online-widget .online-names { display: flex; flex-direction: column; gap: 2px; }
-  #online-widget .online-names span { color: #eee; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #online-widget .change-nick-btn {
-    margin-top: 5px; background: transparent; border: 0; color: #6d28d9;
-    font-size: 11px; cursor: pointer; padding: 0; text-decoration: underline;
-  }
+  .zoom-bar button { background: transparent; color: var(--text); width: 30px; height: 30px; padding: 0; border-radius: 50%; font-size: 15px; }
+  .zoom-bar button:hover { background: var(--ink-3); }
+  .zoom-bar #zoom-reset-btn { width: auto; padding: 0 12px; border-radius: 999px; font-size: 12px; color: var(--muted); }
+  #zoom-level-label { min-width: 46px; text-align: center; display: inline-block; font-size: 12px; font-weight: 600; }
 
   #canvas-viewport {
     position: relative; flex: 1; width: 100%; min-height: 0;
@@ -179,164 +399,239 @@
   #canvas-viewport.panning #canvas { cursor: grabbing; }
   #canvas-wrap {
     position: absolute; top: 0; left: 0; width: 1280px; height: 720px;
-    transform-origin: 0 0; overflow: visible; background-color: #333;
+    transform-origin: 0 0; overflow: visible; background-color: #2b2c38;
     background-image:
-      linear-gradient(45deg, #444 25%, transparent 25%),
-      linear-gradient(-45deg, #444 25%, transparent 25%),
-      linear-gradient(45deg, transparent 75%, #444 75%),
-      linear-gradient(-45deg, transparent 75%, #444 75%);
-    background-size: 20px 20px; border: 1px solid #362440; border-radius: 10px;
+      linear-gradient(45deg, #34364a 25%, transparent 25%),
+      linear-gradient(-45deg, #34364a 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #34364a 75%),
+      linear-gradient(-45deg, transparent 75%, #34364a 75%);
+    background-size: 20px 20px; border: 1px solid var(--ink-3); border-radius: 10px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
   }
-  #zoom-level-label { min-width: 44px; text-align: center; display: inline-block; font-size: 13px; color: #ccc; }
   #twitch-embed { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; overflow: hidden; border-radius: 10px; }
   #twitch-embed iframe { width: 100%; height: 100%; border: 0; pointer-events: none; }
   #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; z-index: 1; }
 
   #media-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
   .media-item {
-    position: absolute; outline: 2px dashed #6d28d9; outline-offset: -2px; pointer-events: auto; cursor: move;
+    position: absolute; outline: 2px dashed rgba(255, 122, 162, 0.7); outline-offset: -2px; pointer-events: auto; cursor: move;
     user-select: none; -webkit-user-select: none; -moz-user-select: none;
   }
   .media-item * { user-select: none; -webkit-user-select: none; -moz-user-select: none; -webkit-user-drag: none; }
-  .media-item.selected { outline: 3px solid #ffcc00; outline-offset: -3px; box-shadow: 0 0 0 2px #ffcc0055; }
+  .media-item.selected { outline: 3px solid var(--warn); outline-offset: -3px; box-shadow: 0 0 0 2px rgba(255, 200, 97, 0.35); }
   .media-item img, .media-item iframe { width: 100%; height: 100%; display: block; border: 0; pointer-events: none; }
   .media-item .item-controls { position: absolute; top: -14px; right: -14px; display: flex; gap: 4px; }
-  .media-item .item-btn { width: 26px; height: 26px; border-radius: 50%; background: #444; color: #fff; border: 0; font-size: 13px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
-  .media-item .item-btn.remove { background: #e33; }
-  .resize-handle { position: absolute; right: -8px; bottom: -8px; width: 16px; height: 16px; background: #6d28d9; border-radius: 3px; cursor: nwse-resize; pointer-events: auto; }
+  .media-item .item-btn {
+    width: 28px; height: 28px; border-radius: 50%; background: var(--ink-1); color: var(--text);
+    border: 1px solid var(--ink-3); font-size: 13px; display: flex; align-items: center; justify-content: center; padding: 0;
+  }
+  .media-item .item-btn:hover { background: var(--ink-3); }
+  .media-item .item-btn.remove { background: var(--danger); border-color: var(--danger); color: #fff; }
+  .resize-handle { position: absolute; right: -8px; bottom: -8px; width: 16px; height: 16px; background: var(--accent); border: 2px solid var(--ink-0); border-radius: 4px; cursor: nwse-resize; pointer-events: auto; }
   .rotate-handle {
     position: absolute; top: -28px; left: 50%; transform: translateX(-50%);
-    width: 16px; height: 16px; background: #ffcc00; border-radius: 50%;
-    cursor: grab; pointer-events: auto; border: 2px solid #2a1933;
+    width: 16px; height: 16px; background: var(--warn); border-radius: 50%;
+    cursor: grab; pointer-events: auto; border: 2px solid var(--ink-0);
   }
   .rotate-handle::after {
-    content: ''; position: absolute; top: 16px; left: 50%; width: 1px; height: 12px;
-    background: #ffcc00; transform: translateX(-50%);
+    content: ''; position: absolute; top: 14px; left: 50%; width: 1px; height: 12px;
+    background: var(--warn); transform: translateX(-50%);
   }
-  .hint { text-align: left; font-size: 12.5px; color: #888; margin: 4px auto 0 auto; max-width: 1400px; line-height: 1.5; }
+  .hint { text-align: left; font-size: 12.5px; color: var(--faint); margin: 4px auto 0 auto; max-width: 1400px; line-height: 1.5; }
+
+  @media (max-width: 760px) {
+    :root { --panel-w: min(300px, calc(100vw - var(--rail-w) - 40px)); --rail-w: 60px; }
+    .resizer { display: none; }
+  }
 </style>
 </head>
 <body>
 <div class="app-shell">
-  <button id="sidebar-toggle-btn" title="Скрыть/показать панель">◀</button>
+  <nav class="rail" aria-label="Разделы панели">
+    <div class="brand" title="meowlay">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="6" cy="9" r="2.2"/><circle cx="10.2" cy="5.6" r="2.2"/><circle cx="13.8" cy="5.6" r="2.2"/><circle cx="18" cy="9" r="2.2"/><path d="M12 10.5c-3 0-6 3.4-6 6.3 0 1.7 1.3 2.7 3 2.7 1.2 0 2-.6 3-.6s1.8.6 3 .6c1.7 0 3-1 3-2.7 0-2.9-3-6.3-6-6.3z"/></svg>
+    </div>
+    <button class="rail-tab active" data-tab="layers" title="Слои и управление медиа">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 3 8l9 5 9-5-9-5z"/><path d="m3 13 9 5 9-5"/></svg>
+      Слои
+    </button>
+    <button class="rail-tab" data-tab="add" title="Добавить медиа">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M12 8v8M8 12h8"/></svg>
+      Добавить
+    </button>
+    <button class="rail-tab" data-tab="draw" title="Рисование">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l1-4L16 5l3 3L8 19l-4 1z"/><path d="m14 7 3 3"/></svg>
+      Рисовать
+    </button>
+    <button class="rail-tab" data-tab="folders" title="Папки">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2.5h7a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></svg>
+      Папки
+    </button>
+    <button class="rail-tab" data-tab="stream" title="Twitch-стрим">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2.5"/><path d="M8 21h8M12 17v4"/><path d="m10.5 9 3.5 2-3.5 2z" fill="currentColor"/></svg>
+      Стрим
+    </button>
+    <div class="rail-spacer"></div>
+    <button id="sidebar-toggle-btn" title="Скрыть левую часть целиком (Ctrl+B)">◀</button>
+  </nav>
+
   <aside class="sidebar">
-    <div class="brand"><span class="brand-icon">🐾</span> meowlay</div>
+    <div class="resizer" id="panel-resizer" title="Тяни, чтобы изменить ширину панели"></div>
+    <button id="panel-hide-btn" title="Скрыть левую часть целиком (Ctrl+B)">«</button>
 
-    <div class="side-section">
-      <h3>Элементы</h3>
-      <ul id="elements-list"></ul>
+    <!-- Слои + настройки выбранного -->
+    <section class="pane layers-pane active" data-pane="layers">
+      <div class="pane-head"><h2>Слои</h2></div>
       <div class="elements-footer">
+        <input type="text" id="elements-search" placeholder="Поиск по названию">
         <button id="elements-hide-selected-btn" class="secondary" title="Скрыть/показать выделенное">🙈</button>
-        <input type="text" id="elements-search" placeholder="search...">
-        <button id="elements-add-btn" class="secondary" title="Добавить медиа">＋</button>
+        <button id="elements-add-btn" title="Добавить медиа">＋</button>
       </div>
-    </div>
+      <div class="pane-body">
+        <ul id="elements-list"></ul>
+        <div class="inspector">
+          <div class="inspector-head">
+            <span class="group-title" id="inspector-title">Настройки</span>
+          </div>
+          <div class="inspector-empty" id="inspector-empty">Выбери элемент в списке или на сцене — здесь появятся его настройки и управление видео.</div>
+          <ul id="media-list"></ul>
+        </div>
+      </div>
+    </section>
 
-    <div class="side-section">
-      <h3>Инструменты</h3>
-      <div class="tools-grid">
-        <button class="tool-btn active" data-tool="pen">✏️ Кисть</button>
-        <button class="tool-btn" data-tool="eraser">🧹 Ластик</button>
-        <button class="tool-btn" data-tool="rect">⬛ Квадрат</button>
-        <button class="tool-btn" data-tool="circle">⚪ Круг</button>
-        <button class="tool-btn" data-tool="star">⭐ Звезда</button>
-        <button class="tool-btn" data-tool="text">🅰️ Текст</button>
-      </div>
-      <div class="toolbar">
-        <label>Цвет: <input type="color" id="color" value="#ff0000"></label>
-      </div>
-      <div class="toolbar">
-        <label>Толщина: <input type="range" id="size" min="1" max="40" value="4"></label>
-      </div>
-      <div class="toolbar">
-        <label><input type="checkbox" id="fill-toggle"> Заливка фигур</label>
-      </div>
-      <div class="toolbar">
-        <button id="undo-btn" class="secondary">↩ Отменить</button>
-        <button id="redo-btn" class="secondary">↪ Повторить</button>
-      </div>
-      <div class="toolbar">
-        <button id="clear-canvas-btn" class="secondary">Очистить всё</button>
-      </div>
-    </div>
+    <!-- Добавить медиа -->
+    <section class="pane" data-pane="add">
+      <div class="pane-head"><h2>Добавить медиа</h2></div>
+      <div class="pane-body">
+        <div class="group">
+          <label class="dropzone" id="file-dropzone">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+            <strong>Загрузить с компьютера</strong>
+            <span class="note">Перетащи файлы сюда или нажми. Картинки до 12 МБ, видео до 20 МБ</span>
+            <input type="file" id="media-file" accept="image/*,video/*" multiple style="display:none;">
+          </label>
+        </div>
 
-    <div class="side-section">
-      <h3>Масштаб области</h3>
-      <div class="toolbar">
-        <button id="zoom-out-btn" class="secondary" title="Отдалить">➖</button>
-        <span id="zoom-level-label">100%</span>
-        <button id="zoom-in-btn" class="secondary" title="Приблизить">➕</button>
-      </div>
-      <div class="toolbar">
-        <button id="zoom-reset-btn" class="secondary">Сбросить масштаб</button>
-      </div>
-    </div>
+        <div class="or">или по ссылке</div>
 
-    <div class="side-section">
-      <h3>Twitch-стрим</h3>
-      <div class="toolbar">
-        <input type="text" id="twitch-channel-input" placeholder="Ник канала на Twitch" style="width:100%;">
-      </div>
-      <div class="toolbar">
-        <button id="connect-twitch-btn">📺 Подключить</button>
-        <button id="disconnect-twitch-btn" class="secondary">Отключить</button>
-      </div>
-      <div class="toolbar">
-        <button id="twitch-interact-btn" class="secondary">🖱 Управлять стримом</button>
-      </div>
-    </div>
+        <div class="group">
+          <select id="media-type" style="display:none;">
+            <option value="image">Картинка / GIF (ссылка)</option>
+            <option value="youtube">YouTube (ссылка)</option>
+            <option value="browser">Браузер-источник (любой сайт)</option>
+            <option value="ninja">OBS Ninja (ссылка)</option>
+          </select>
+          <div class="segmented" id="media-type-seg">
+            <button type="button" data-type="image" class="active">Картинка / GIF</button>
+            <button type="button" data-type="youtube">YouTube</button>
+            <button type="button" data-type="browser">Сайт</button>
+            <button type="button" data-type="ninja">OBS Ninja</button>
+          </div>
+          <input type="text" id="media-url" placeholder="Ссылка на картинку или GIF" class="full">
+          <div id="media-browser-proxy-row" style="display:none;">
+            <label class="switch" title="Для ChatIS / StreamElements и т.п. — сайтов, которые запрещают показывать себя во фрейме">
+              <input type="checkbox" id="media-browser-proxy"><span class="track"></span>
+              Открывать через прокси
+            </label>
+          </div>
+          <button id="add-media-btn" class="full">Добавить по ссылке</button>
+        </div>
 
-    <div class="side-section">
-      <h3>Добавить медиа</h3>
-      <div class="media-form">
-        <select id="media-type" style="width:100%;">
-          <option value="image">Картинка / GIF (ссылка)</option>
-          <option value="youtube">YouTube (ссылка)</option>
-          <option value="browser">Браузер-источник (любой сайт)</option>
-          <option value="ninja">OBS Ninja (ссылка)</option>
-        </select>
-      </div>
-      <div class="media-form">
-        <input type="text" id="media-url" placeholder="Вставь ссылку" style="flex:1; min-width:0;">
-      </div>
-      <div class="media-form" id="media-browser-proxy-row" style="display:none;">
-        <label style="display:flex; align-items:center; gap:6px; font-size:11.5px; color:#bbb;" title="Для ChatIS / StreamElements и т.п. — сайтов, которые запрещают показывать себя во фрейме">
-          <input type="checkbox" id="media-browser-proxy">
-          🔓 Прокси
-        </label>
-      </div>
-      <div class="media-form">
-        <button id="add-media-btn" style="width:100%;">Добавить по ссылке</button>
-      </div>
-      <div class="media-form">
-        <label style="background:#6d28d9; padding:8px 12px; border-radius:6px; cursor:pointer; width:100%; text-align:center;">
-          📁 Загрузить с компьютера
-          <input type="file" id="media-file" accept="image/*,video/*" multiple style="display:none;">
-        </label>
-      </div>
-      <div class="media-form">
-        <button id="clear-media-btn" class="secondary" style="width:100%;">Убрать всё медиа</button>
-      </div>
-    </div>
+        <div class="divider"></div>
 
-    <div class="side-section" id="folders-panel">
-      <h3>🗂 Папки</h3>
-      <div class="media-form">
-        <input type="text" id="folder-name-input" placeholder="Название папки" style="flex:1; min-width:0;">
-      </div>
-      <div class="media-form">
-        <button id="create-folder-btn" style="width:100%;">Создать папку</button>
-      </div>
-      <ul id="folders-list"></ul>
-    </div>
+        <div class="group">
+          <span class="group-title">Таймер обратного отсчёта</span>
+          <div class="timer-fields">
+            <label>Часы<input type="number" id="timer-h" min="0" max="99" value="0"></label>
+            <label>Минуты<input type="number" id="timer-m" min="0" max="59" value="5"></label>
+            <label>Секунды<input type="number" id="timer-s" min="0" max="59" value="0"></label>
+            <label>Цвет<input type="color" id="timer-color" value="#ffffff"></label>
+          </div>
+          <button id="add-timer-btn" class="full">Добавить таймер</button>
+          <span class="note">Появится сверху по центру сцены, его можно двигать и растягивать. Запуск — в настройках таймера.</span>
+        </div>
 
-    <div class="side-section">
-      <h3>Активные медиа (слои)</h3>
-      <ul id="media-list"></ul>
-    </div>
+        <div class="divider"></div>
+        <button id="clear-media-btn" class="danger full">Убрать всё медиа со сцены</button>
+      </div>
+    </section>
+
+    <!-- Рисование -->
+    <section class="pane" data-pane="draw">
+      <div class="pane-head"><h2>Рисование</h2></div>
+      <div class="pane-body">
+        <div class="tools-grid">
+          <button class="tool-btn active" data-tool="pen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 20l1-4L16 5l3 3L8 19l-4 1z"/></svg>Кисть</button>
+          <button class="tool-btn" data-tool="eraser"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="m15 4 5 5-9 9H6l-3-3z"/><path d="M11 18h9"/></svg>Ластик</button>
+          <button class="tool-btn" data-tool="text"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 6h14M12 6v13"/></svg>Текст</button>
+          <button class="tool-btn" data-tool="rect"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4.5" y="4.5" width="15" height="15" rx="2"/></svg>Квадрат</button>
+          <button class="tool-btn" data-tool="circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="7.5"/></svg>Круг</button>
+          <button class="tool-btn" data-tool="star"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>Звезда</button>
+        </div>
+
+        <div class="group">
+          <span class="group-title">Цвет</span>
+          <div class="swatches" id="color-swatches">
+            <input type="color" id="color" value="#ff0000" title="Свой цвет">
+            <button class="swatch" data-color="#ff3b3b" style="background:#ff3b3b" title="Красный"></button>
+            <button class="swatch" data-color="#ff7aa2" style="background:#ff7aa2" title="Розовый"></button>
+            <button class="swatch" data-color="#ffc861" style="background:#ffc861" title="Жёлтый"></button>
+            <button class="swatch" data-color="#5fe0b7" style="background:#5fe0b7" title="Мятный"></button>
+            <button class="swatch" data-color="#5aa9ff" style="background:#5aa9ff" title="Синий"></button>
+            <button class="swatch" data-color="#ffffff" style="background:#ffffff" title="Белый"></button>
+            <button class="swatch" data-color="#111111" style="background:#111111" title="Чёрный"></button>
+          </div>
+        </div>
+
+        <div class="group">
+          <div class="pc-head"><span class="group-title">Толщина</span><span class="pc-val" id="size-val">4</span></div>
+          <input type="range" id="size" min="1" max="40" value="4" class="full">
+        </div>
+
+        <label class="switch"><input type="checkbox" id="fill-toggle"><span class="track"></span>Заливать фигуры</label>
+        <span class="note">Фигуры становятся отдельными слоями: их можно двигать, растягивать и менять в настройках. Shift+клик — выбрать несколько и двигать вместе.</span>
+
+        <div class="row">
+          <button id="undo-btn" class="secondary grow" title="Ctrl+Z">↩ Отменить</button>
+          <button id="redo-btn" class="secondary grow" title="Ctrl+Shift+Z">↪ Повторить</button>
+        </div>
+        <div class="divider"></div>
+        <button id="clear-canvas-btn" class="danger full">Стереть весь рисунок</button>
+      </div>
+    </section>
+
+    <!-- Папки -->
+    <section class="pane" data-pane="folders">
+      <div class="pane-head"><h2>Папки</h2></div>
+      <div class="pane-body">
+        <div class="row">
+          <input type="text" id="folder-name-input" placeholder="Название новой папки" class="grow">
+          <button id="create-folder-btn">Создать</button>
+        </div>
+        <span class="note">Перетащи элемент из списка слоёв на папку, чтобы положить его туда.</span>
+        <ul id="folders-list"></ul>
+      </div>
+    </section>
+
+    <!-- Twitch -->
+    <section class="pane" data-pane="stream">
+      <div class="pane-head"><h2>Twitch-стрим</h2></div>
+      <div class="pane-body">
+        <div class="group">
+          <span class="note">Стрим показывается фоном сцены, чтобы было видно, куда ставить медиа.</span>
+          <input type="text" id="twitch-channel-input" placeholder="Ник канала или ссылка" class="full">
+          <div class="row">
+            <button id="connect-twitch-btn" class="grow">Подключить</button>
+            <button id="disconnect-twitch-btn" class="secondary grow">Отключить</button>
+          </div>
+          <button id="twitch-interact-btn" class="secondary full">🖱 Управлять стримом (play/pause/звук)</button>
+        </div>
+      </div>
+    </section>
   </aside>
 
   <main class="workspace">
+    <button id="show-ui-btn" title="Показать панель (Ctrl+B)">☰ Панель</button>
     <div id="status">Подключение...</div>
     <div id="online-widget" style="display:none;">
       <div class="online-title"><span class="online-dot"></span><span id="online-count">0 онлайн</span></div>
@@ -351,12 +646,39 @@
         <div id="media-layer"></div>
       </div>
     </div>
+
+    <div class="zoom-bar" title="Колесо мыши — масштаб, пробел + тяни — двигать сцену">
+      <button id="zoom-out-btn" title="Отдалить">−</button>
+      <span id="zoom-level-label">100%</span>
+      <button id="zoom-in-btn" title="Приблизить">+</button>
+      <button id="zoom-reset-btn" title="Вписать сцену в окно">Вписать</button>
+    </div>
   </main>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-const socket = io();
+// ТЕСТОВЫЙ РЕЖИМ: без пароля и без ника. Если сервера нет (файл открыт
+// локально), работает без сети — всё двигается, но изменения никуда не уходят.
+const TEST_MODE = false;
+const OFFLINE = typeof io === 'undefined';
+function createOfflineSocket() {
+  const handlers = {};
+  const fire = (ev, data) => (handlers[ev] || []).forEach((fn) => fn(data));
+  setTimeout(() => fire('connect'), 0);
+  return {
+    on(ev, fn) { (handlers[ev] = handlers[ev] || []).push(fn); },
+    emit(ev) {
+      if (ev === 'auth') setTimeout(() => fire('auth-result', { ok: true, nickname: 'локально' }), 0);
+      if (ev === 'create-folder') {
+        const id = 'f' + Date.now();
+        foldersLocal[id] = { id, name: arguments[1], memberIds: [] };
+        setTimeout(() => fire('folders-sync', foldersLocal), 0);
+      }
+    }
+  };
+}
+const socket = OFFLINE ? createOfflineSocket() : io();
 const statusEl = document.getElementById('status');
 
 // --- Скрыть/показать боковую панель ---
@@ -371,8 +693,10 @@ sidebarToggleBtn.addEventListener('click', () => {
   setSidebarCollapsed(!document.body.classList.contains('sidebar-collapsed'));
 });
 
-let authed = false;
-const password = prompt('Введи пароль модератора:');
+let authed = TEST_MODE;
+let password = null;
+try { password = localStorage.getItem('meowlay-pass'); } catch (e) {}
+if (!password && !TEST_MODE) password = prompt('Введи пароль модератора:');
 socket.on('connect', () => socket.emit('auth', password));
 
 const onlineWidget = document.getElementById('online-widget');
@@ -391,13 +715,22 @@ function askNickname(promptText) {
 socket.on('auth-result', (result) => {
   // Поддержка и старого формата (boolean), и нового ({ ok, nickname })
   const ok = typeof result === 'object' ? result.ok : result;
+  if (!ok && TEST_MODE) {
+    statusEl.textContent = '🧪 Тестовый режим (сервер не принял пароль — изменения не уйдут другим)';
+    return;
+  }
   if (!ok) {
+    try { localStorage.removeItem('meowlay-pass'); } catch (e) {}
     statusEl.textContent = '❌ Неверный пароль. Обнови страницу и попробуй снова.';
     return;
   }
   authed = true;
+  try { localStorage.setItem('meowlay-pass', password); } catch (e) {}
   const nickname = typeof result === 'object' ? result.nickname : null;
-  if (nickname) {
+  if (TEST_MODE) {
+    statusEl.textContent = OFFLINE ? '🧪 Локальный режим, без сервера' : '🧪 Тестовый режим';
+    if (!nickname) socket.emit('set-nickname', 'тест');
+  } else if (nickname) {
     statusEl.textContent = '✅ Подключено как ' + nickname;
     onlineWidget.style.display = '';
   } else {
@@ -697,13 +1030,14 @@ document.getElementById('twitch-interact-btn').addEventListener('click', () => {
     twitchContainer.style.pointerEvents = 'auto';
     if (iframeEl) iframeEl.style.pointerEvents = 'auto';
     btn.textContent = '✏️ Вернуться к рисованию';
-    btn.style.background = '#e33';
+    btn.style.background = 'var(--danger)'; btn.style.color = '#fff';
   } else {
     canvas.style.pointerEvents = '';
     twitchContainer.style.pointerEvents = 'none';
     if (iframeEl) iframeEl.style.pointerEvents = 'none';
     btn.textContent = '🖱 Управлять стримом (play/pause/звук)';
     btn.style.background = '';
+    btn.style.color = '';
   }
 });
 
@@ -820,6 +1154,14 @@ socket.on('clear-canvas', () => {
 document.getElementById('clear-canvas-btn').addEventListener('click', () => {
   checkpoint();
   socket.emit('clear-canvas');
+  // Сервер может не прислать очистку обратно тому, кто её нажал — чистим сами
+  historyList = [];
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // Фигуры тоже часть рисунка
+  Object.values(mediaItemsLocal).filter((it) => it.shape).forEach((it) => {
+    socket.emit('remove-media', it.id);
+    removeMediaLocal(it.id);
+  });
 });
 document.getElementById('undo-btn').addEventListener('click', () => {
   if (!authed) return;
@@ -869,18 +1211,22 @@ function startAction(e) {
     shapeStart = getPos(e);
   } else if (tool === 'text') {
     const pos = getPos(e);
-    const text = prompt('Введите текст:');
-    if (text) {
-      checkpoint();
-      const item = {
-        id: 'id' + Date.now() + Math.random().toString(36).slice(2),
-        type: 'text', text, color: colorInput.value, fontScale: 0.6,
-        x: pos.x, y: pos.y, w: 0.3, h: 0.12, z: 9999
-      };
-      socket.emit('add-media', item);
-      createOrUpdateMedia(item);
-      sortMediaList();
-    }
+    // Как в OBS: текст сразу появляется на сцене, а редактируется в настройках
+    checkpoint();
+    const item = {
+      id: 'id' + Date.now() + Math.random().toString(36).slice(2),
+      type: 'text', text: 'Текст', color: colorInput.value, fontScale: 0.6,
+      x: Math.min(pos.x, 0.85), y: Math.min(pos.y, 0.9), w: 0.3, h: 0.12, z: 9999
+    };
+    socket.emit('add-media', item);
+    createOrUpdateMedia(item);
+    sortMediaList();
+    selectOnly(item.id);
+    if (window.switchTab) switchTab('layers');
+    setTimeout(() => {
+      const inp = document.querySelector('#li-' + item.id + ' .text-edit');
+      if (inp) { inp.focus(); inp.select(); }
+    }, 30);
   }
 }
 
@@ -903,29 +1249,39 @@ function moveAction(e) {
   } else if (shapeDragging) {
     e.preventDefault();
     const pos = getPos(e);
-    replayHistory();
-    drawShape({
-      shapeType: tool, x0: shapeStart.x, y0: shapeStart.y, x1: pos.x, y1: pos.y,
-      color: colorInput.value, size: parseInt(sizeInput.value, 10),
-      filled: document.getElementById('fill-toggle').checked
-    });
+    // Рамка-превью поверх сцены, пока тянешь фигуру
+    let pv = document.getElementById('shape-preview');
+    if (!pv) {
+      pv = document.createElement('div');
+      pv.id = 'shape-preview';
+      canvasWrap.appendChild(pv);
+    }
+    const x = Math.min(shapeStart.x, pos.x), y = Math.min(shapeStart.y, pos.y);
+    pv.style.left = (x * 100) + '%';
+    pv.style.top = (y * 100) + '%';
+    pv.style.width = (Math.abs(pos.x - shapeStart.x) * 100) + '%';
+    pv.style.height = (Math.abs(pos.y - shapeStart.y) * 100) + '%';
+    pv.style.borderRadius = tool === 'circle' ? '50%' : '0';
+    pv.style.borderColor = colorInput.value;
     lastPos = pos;
   }
 }
 
 function finalizeShapeIfNeeded() {
-  if (shapeStart && lastPos && (tool === 'rect' || tool === 'circle' || tool === 'star') && !drawing) {
-    const obj = {
-      id: 'obj' + Date.now() + Math.random().toString(36).slice(2),
-      kind: 'shape', shapeType: tool,
-      x0: shapeStart.x, y0: shapeStart.y, x1: lastPos.x, y1: lastPos.y,
-      color: colorInput.value, size: parseInt(sizeInput.value, 10),
+  const pv = document.getElementById('shape-preview');
+  if (pv) pv.remove();
+  if (shapeStart && (tool === 'rect' || tool === 'circle' || tool === 'star') && !drawing && window.addShapeLayer) {
+    const end = lastPos || shapeStart;
+    let x = Math.min(shapeStart.x, end.x), y = Math.min(shapeStart.y, end.y);
+    let w = Math.abs(end.x - shapeStart.x), h = Math.abs(end.y - shapeStart.y);
+    if (w < 0.01 || h < 0.01) { w = 0.12; h = 0.12 * 16 / 9; } // просто клик — фигура стандартного размера
+    window.addShapeLayer({
+      type: tool, color: colorInput.value, size: parseInt(sizeInput.value, 10),
       filled: document.getElementById('fill-toggle').checked
-    };
-    historyList.push(obj);
-    socket.emit('add-object', obj);
+    }, x, y, w, h);
   }
   shapeStart = null;
+  lastPos = null;
 }
 
 canvasWrap.addEventListener('mousedown', startAction);
@@ -959,12 +1315,22 @@ function toggleHidden(item) {
     if (localVid) {
       if (item.hidden) {
         localVid.muted = true;
+        localVid.pause();
       } else {
         localVid.muted = false;
         const siteSlider = document.getElementById('sitevol-' + item.id);
-        localVid.volume = siteSlider ? parseInt(siteSlider.value, 10) / 100 : 0;
+        localVid.volume = siteSlider ? parseInt(siteSlider.value, 10) / 100 : 0.8;
+        localVid.play().catch(() => {});
       }
     }
+    // Скрытое видео не должно играть вообще — ставим на паузу и в оверлее
+    socket.emit('video-control', { id: item.id, action: item.hidden ? 'pause' : 'resume' });
+    const pb = document.querySelector('#li-' + item.id + ' .vc-main');
+    if (pb) pb.textContent = item.hidden ? '▶ Играть' : '❚❚ Пауза';
+  }
+  if (item.type === 'youtube') {
+    socket.emit('youtube-control', { id: item.id, action: item.hidden ? 'pause' : 'play' });
+    ytPanelCommand(item.id, item.hidden ? 'pauseVideo' : 'playVideo');
   }
 
   sendUpdate(item);
@@ -974,6 +1340,20 @@ function toggleHidden(item) {
   const listHideBtn = document.getElementById('hidebtn-' + item.id);
   if (listHideBtn) listHideBtn.textContent = item.hidden ? '👁 Показать' : '🙈 Скрыть';
   renderElementsList();
+}
+
+// Команда плееру YouTube на самой панели (превью), не на стриме
+function ytPanelCommand(id, func, args) {
+  const iframe = document.getElementById('cmyt-' + id);
+  if (iframe && iframe.contentWindow) {
+    iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func, args: args || [] }), '*');
+  }
+}
+const ytInfo = {}; // id -> { cur, dur } из плеера YouTube на панели
+// Громкость "у меня" по умолчанию — 80%
+function getSiteVolume(id) {
+  const s = document.getElementById('sitevol-' + id);
+  return s ? parseInt(s.value, 10) : 80;
 }
 
 // --- Медиа ---
@@ -1160,7 +1540,7 @@ function createOrUpdateMedia(item) {
       // На холсте модератора он тоже виден "живьём" (перетаскивание работает
       // поверх него, т.к. у .media-item iframe стоит pointer-events: none).
       inner.innerHTML = '<iframe id="browser-' + item.id + '" src="' + item.url +
-        '" allow="autoplay; encrypted-media; fullscreen" style="background:#111;"></iframe>';
+        '" allow="autoplay; encrypted-media; fullscreen" style="background:' + (item.timer ? 'transparent' : '#111') + ';"></iframe>';
     } else if (item.type === 'ninja') {
       inner.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#0008;color:#fff;font-size:12px;text-align:center;">OBS Ninja</div>';
     }
@@ -1237,7 +1617,8 @@ function createOrUpdateMedia(item) {
     });
 
     if (item.type === 'video') {
-      const videoEl = document.getElementById('vid-' + item.id);
+      // Элемент ещё не добавлен в документ, поэтому ищем видео внутри него
+      const videoEl = el.querySelector('video');
       if (videoEl) {
         // Звук на сайте по умолчанию выключен (0%) — видео просто играет
         // молча, пока сам не поднимешь ползунок "Сайт"
@@ -1246,6 +1627,17 @@ function createOrUpdateMedia(item) {
             toggleHidden(item);
           }
         });
+        // Громкость у модератора по умолчанию 80%. Если браузер не даёт
+        // включить звук без клика по странице — играем без звука, а звук
+        // включится при первом клике (см. ниже unlockSiteAudio).
+        videoEl.volume = 0.8;
+        if (item.hidden) {
+          videoEl.pause();
+        } else {
+          videoEl.muted = false;
+          const p = videoEl.play();
+          if (p) p.catch(() => { videoEl.muted = true; videoEl.play().catch(() => {}); });
+        }
       }
     }
 
@@ -1258,10 +1650,22 @@ function createOrUpdateMedia(item) {
           iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func, args: args || [] }), '*');
         }
       };
+      const canHaveSound = !navigator.userActivation || navigator.userActivation.hasBeenActive;
       [400, 1000, 2000, 3500].forEach((delay) => {
         setTimeout(() => {
-          sendPanelYtCommand('mute');
-          sendPanelYtCommand('playVideo');
+          const iframe = document.getElementById('cmyt-' + item.id);
+          if (iframe && iframe.contentWindow) {
+            // Подписка на события плеера — чтобы знать текущее время и длительность
+            iframe.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: item.id, channel: 'widget' }), '*');
+          }
+          if (canHaveSound) {
+            sendPanelYtCommand('unMute');
+            sendPanelYtCommand('setVolume', [getSiteVolume(item.id)]);
+          } else {
+            sendPanelYtCommand('mute');
+          }
+          if (!item.hidden) sendPanelYtCommand('playVideo');
+          else sendPanelYtCommand('pauseVideo');
         }, delay);
       });
     }
@@ -1516,10 +1920,10 @@ socket.on('update-media', (data) => {
       if (localVid) {
         if (item.hidden) {
           localVid.muted = true;
+          localVid.pause();
         } else {
           localVid.muted = false;
-          const siteSlider = document.getElementById('sitevol-' + data.id);
-          localVid.volume = siteSlider ? parseInt(siteSlider.value, 10) / 100 : 0;
+          localVid.volume = getSiteVolume(data.id) / 100;
         }
       }
     }
@@ -1554,8 +1958,22 @@ socket.on('clear-media', () => {
 socket.on('video-control', (data) => {
   const videoEl = document.getElementById('vid-' + data.id);
   if (!videoEl) return;
-  if (data.action === 'play') { videoEl.currentTime = 0; videoEl.play().catch(() => {}); }
+  if (data.action === 'play' || data.action === 'restart') { videoEl.currentTime = 0; videoEl.play().catch(() => {}); }
+  else if (data.action === 'resume') { videoEl.play().catch(() => {}); }
   else if (data.action === 'pause') { videoEl.pause(); }
+  else if (data.action === 'seek' && typeof data.time === 'number') { videoEl.currentTime = data.time; }
+});
+socket.on('youtube-control', (data) => {
+  if (!data || !data.id) return;
+  if (data.action === 'play') ytPanelCommand(data.id, 'playVideo');
+  else if (data.action === 'pause') ytPanelCommand(data.id, 'pauseVideo');
+  else if (data.action === 'seek' && typeof data.value === 'number') ytPanelCommand(data.id, 'seekTo', [data.value, true]);
+  else if (data.action === 'volume') {
+    const s = document.getElementById('ytvol-' + data.id);
+    const v = document.getElementById('ytvol-' + data.id + '-val');
+    if (s) s.value = data.value;
+    if (v) v.textContent = data.value + '%';
+  }
 });
 socket.on('rename-media', (data) => {
   const item = mediaItemsLocal[data.id];
@@ -1610,6 +2028,10 @@ document.getElementById('add-media-btn').addEventListener('click', () => {
     const vid = extractYoutubeId(url);
     if (!vid) return alert('Не получилось распознать ссылку на YouTube');
     item.videoId = vid;
+    item.volume = 0; // на стриме по умолчанию без звука
+    [1500, 3500, 6000].forEach((d) => setTimeout(() => {
+      socket.emit('youtube-control', { id, action: 'volume', value: 0 });
+    }, d));
   }
   checkpoint();
   socket.emit('add-media', item);
@@ -1860,29 +2282,33 @@ function createPercentControl(idSuffix, labelText, initialValue, step, title, on
   maxValue = maxValue !== undefined ? maxValue : 100;
   suffix = suffix !== undefined ? suffix : '%';
   const wrap = document.createElement('div');
-  wrap.style.display = 'flex'; wrap.style.alignItems = 'center'; wrap.style.gap = '3px';
+  wrap.className = 'pc';
   if (title) wrap.title = title;
 
+  const head = document.createElement('div');
+  head.className = 'pc-head';
   const lbl = document.createElement('span');
-  lbl.textContent = labelText; lbl.style.fontSize = '12px';
-
-  const minusBtn = document.createElement('button');
-  minusBtn.textContent = '−'; minusBtn.className = 'secondary';
-  minusBtn.style.padding = '2px 7px'; minusBtn.style.fontSize = '13px';
-
-  const slider = document.createElement('input');
-  slider.type = 'range'; slider.min = 0; slider.max = maxValue; slider.value = initialValue;
-  slider.style.width = '70px';
-  slider.id = idSuffix;
-
+  lbl.className = 'pc-label';
+  lbl.textContent = labelText;
   const valSpan = document.createElement('span');
+  valSpan.className = 'pc-val';
   valSpan.id = idSuffix + '-val';
   valSpan.textContent = initialValue + suffix;
-  valSpan.style.fontSize = '12px'; valSpan.style.minWidth = '32px'; valSpan.style.textAlign = 'center';
+  head.appendChild(lbl);
+  head.appendChild(valSpan);
 
+  const body = document.createElement('div');
+  body.className = 'pc-body';
+  const minusBtn = document.createElement('button');
+  minusBtn.textContent = '−'; minusBtn.className = 'pc-step'; minusBtn.title = '−' + step + suffix;
+  const slider = document.createElement('input');
+  slider.type = 'range'; slider.min = 0; slider.max = maxValue; slider.value = initialValue;
+  slider.id = idSuffix;
   const plusBtn = document.createElement('button');
-  plusBtn.textContent = '+'; plusBtn.className = 'secondary';
-  plusBtn.style.padding = '2px 7px'; plusBtn.style.fontSize = '13px';
+  plusBtn.textContent = '+'; plusBtn.className = 'pc-step'; plusBtn.title = '+' + step + suffix;
+  body.appendChild(minusBtn);
+  body.appendChild(slider);
+  body.appendChild(plusBtn);
 
   function setValue(v) {
     v = Math.max(0, Math.min(maxValue, v));
@@ -1899,11 +2325,69 @@ function createPercentControl(idSuffix, labelText, initialValue, step, title, on
     setValue(parseInt(slider.value, 10));
   };
 
-  wrap.appendChild(lbl);
-  wrap.appendChild(minusBtn);
-  wrap.appendChild(slider);
-  wrap.appendChild(valSpan);
-  wrap.appendChild(plusBtn);
+  wrap.appendChild(head);
+  wrap.appendChild(body);
+  return wrap;
+}
+
+function formatTime(sec) {
+  sec = Math.max(0, Math.floor(sec || 0));
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+  const mm = h ? String(m).padStart(2, '0') : String(m);
+  return (h ? h + ':' : '') + mm + ':' + String(s).padStart(2, '0');
+}
+
+// Таймлайн: показывает текущее время и позволяет перемотать.
+// getTime() -> { cur, dur }, seek(t) — перемотка на секунду t
+function createTimeline(item, getTime, seek) {
+  const wrap = document.createElement('div');
+  wrap.className = 'tl';
+  const head = document.createElement('div');
+  head.className = 'tl-head';
+  const cur = document.createElement('span'); cur.className = 'tl-cur'; cur.textContent = '0:00';
+  const dur = document.createElement('span'); dur.textContent = '0:00';
+  head.appendChild(cur); head.appendChild(dur);
+
+  const body = document.createElement('div');
+  body.className = 'tl-body';
+  const back = document.createElement('button');
+  back.className = 'secondary'; back.textContent = '−10с'; back.title = 'Назад на 10 секунд';
+  const range = document.createElement('input');
+  range.type = 'range'; range.min = 0; range.max = 1000; range.value = 0; range.step = 1;
+  const fwd = document.createElement('button');
+  fwd.className = 'secondary'; fwd.textContent = '+10с'; fwd.title = 'Вперёд на 10 секунд';
+  body.appendChild(back); body.appendChild(range); body.appendChild(fwd);
+  wrap.appendChild(head); wrap.appendChild(body);
+
+  let dragging = false;
+  function refresh() {
+    const t = getTime();
+    dur.textContent = formatTime(t.dur);
+    if (!dragging) {
+      cur.textContent = formatTime(t.cur);
+      range.value = t.dur ? Math.round((t.cur / t.dur) * 1000) : 0;
+    }
+  }
+  function jump(t) {
+    const d = getTime().dur;
+    if (!d) return;
+    t = Math.max(0, Math.min(d - 0.2, t));
+    seek(t);
+    cur.textContent = formatTime(t);
+    range.value = Math.round((t / d) * 1000);
+  }
+  range.addEventListener('input', () => {
+    dragging = true;
+    const d = getTime().dur;
+    cur.textContent = formatTime((range.value / 1000) * d);
+  });
+  range.addEventListener('change', () => {
+    dragging = false;
+    jump((range.value / 1000) * getTime().dur);
+  });
+  back.onclick = () => jump(getTime().cur - 10);
+  fwd.onclick = () => jump(getTime().cur + 10);
+  wrap._refresh = refresh;
   return wrap;
 }
 
@@ -1912,14 +2396,7 @@ function addMediaToList(item) {
   li.className = 'media-card';
   li.id = 'li-' + item.id;
   li.dataset.id = item.id;
-  li.draggable = true;
-
-  li.addEventListener('dragstart', (e) => {
-    checkpoint();
-    li.classList.add('dragging');
-    e.dataTransfer.setData('text/plain', item.id);
-  });
-  li.addEventListener('dragend', () => { li.classList.remove('dragging'); });
+  li.draggable = false;
 
   const header = document.createElement('div');
   header.className = 'media-card-header';
@@ -1979,17 +2456,39 @@ function addMediaToList(item) {
   li.appendChild(folderSelect);
 
   if (item.type === 'text') {
+    // Поле для самого текста — меняется сразу на сцене, на стрим уходит
+    // через полсекунды после того, как перестал печатать
+    const textEdit = document.createElement('textarea');
+    textEdit.className = 'text-edit';
+    textEdit.rows = 2;
+    textEdit.value = item.text || '';
+    textEdit.placeholder = 'Введи текст';
+    let textCheckpointed = false;
+    textEdit.addEventListener('focus', () => { textCheckpointed = false; });
+    textEdit.addEventListener('input', () => {
+      if (!textCheckpointed) { checkpoint(); textCheckpointed = true; }
+      item.text = textEdit.value;
+      const el = document.getElementById('cm-' + item.id);
+      const tDiv = el ? el.querySelector('.text-content') : null;
+      if (tDiv) tDiv.textContent = item.text;
+      if (!item.label) {
+        labelSpan.textContent = 'Текст: "' + item.text.slice(0, 25) + '"';
+        labelSpan.title = labelSpan.textContent;
+      }
+      if (window.syncTextItem) window.syncTextItem(item);
+    });
+    li.appendChild(textEdit);
+
     const textControls = document.createElement('div');
     textControls.className = 'media-card-row';
-    textControls.style.display = 'flex'; textControls.style.gap = '6px'; textControls.style.alignItems = 'center';
 
     const sizeLabel = document.createElement('span');
-    sizeLabel.textContent = 'Размер:'; sizeLabel.style.fontSize = '12px';
+    sizeLabel.textContent = 'Размер текста'; sizeLabel.className = 'pc-label';
 
     const fsInput = document.createElement('input');
     fsInput.type = 'range'; fsInput.min = 10; fsInput.max = 200; fsInput.step = 5;
     fsInput.value = Math.round((item.fontScale || 0.6) * 100);
-    fsInput.style.width = '80px';
+    fsInput.style.flex = '1'; fsInput.style.minWidth = '0';
     fsInput.title = 'Размер текста относительно рамки (тяни синий квадратик, чтобы менять и саму рамку)';
     let fsCheckpointed = false;
     fsInput.addEventListener('mousedown', () => { fsCheckpointed = false; });
@@ -2021,31 +2520,73 @@ function addMediaToList(item) {
 
   if (item.type === 'youtube') {
     const ytControls = document.createElement('div');
-    ytControls.className = 'media-card-row';
-    ytControls.style.display = 'flex'; ytControls.style.gap = '6px'; ytControls.style.alignItems = 'center'; ytControls.style.flexWrap = 'wrap';
+    ytControls.className = 'media-card-stack';
 
     const playBtn = document.createElement('button');
-    playBtn.textContent = '▶'; playBtn.className = 'secondary'; playBtn.title = 'Запустить';
-    playBtn.onclick = () => { checkpoint(); socket.emit('youtube-control', { id: item.id, action: 'play' }); };
+    playBtn.textContent = '▶ Играть'; playBtn.title = 'Запустить';
+    playBtn.onclick = () => {
+      checkpoint();
+      if (item.hidden) { toggleHidden(item); return; }
+      socket.emit('youtube-control', { id: item.id, action: 'play' });
+      ytPanelCommand(item.id, 'playVideo');
+    };
 
     const pauseBtn = document.createElement('button');
-    pauseBtn.textContent = '⏸'; pauseBtn.className = 'secondary'; pauseBtn.title = 'Пауза';
-    pauseBtn.onclick = () => { checkpoint(); socket.emit('youtube-control', { id: item.id, action: 'pause' }); };
+    pauseBtn.textContent = '❚❚ Пауза'; pauseBtn.className = 'secondary'; pauseBtn.title = 'Пауза';
+    pauseBtn.onclick = () => {
+      checkpoint();
+      socket.emit('youtube-control', { id: item.id, action: 'pause' });
+      ytPanelCommand(item.id, 'pauseVideo');
+    };
 
-    const volControl = createPercentControl('ytvol-' + item.id, '🔊', 100, 5, 'Громкость на стриме', (v) => {
+    const ytHideBtn = document.createElement('button');
+    ytHideBtn.id = 'hidebtn-' + item.id;
+    ytHideBtn.className = 'secondary';
+    ytHideBtn.textContent = item.hidden ? '👁 Показать' : '🙈 Скрыть';
+    ytHideBtn.title = 'Скрыть — видео исчезает со стрима и ставится на паузу';
+    ytHideBtn.onclick = () => toggleHidden(item);
+
+    const volControl = createPercentControl('ytvol-' + item.id, 'Громкость на стриме', item.volume, 5, 'Громкость на стриме', (v) => {
+      item.volume = v;
       socket.emit('youtube-control', { id: item.id, action: 'volume', value: v });
+      sendUpdate(item);
     });
 
-    ytControls.appendChild(playBtn);
-    ytControls.appendChild(pauseBtn);
+    const ytSiteVol = createPercentControl('sitevol-' + item.id, 'Громкость у меня (не на стриме)', 80, 5, 'Громкость только у тебя на панели', (v) => {
+      ytPanelCommand(item.id, 'unMute');
+      ytPanelCommand(item.id, 'setVolume', [v]);
+    });
+
+    const ytTimeline = createTimeline(item,
+      () => ytInfo[item.id] || { cur: 0, dur: 0 },
+      (t) => {
+        ytPanelCommand(item.id, 'seekTo', [t, true]);
+        socket.emit('youtube-control', { id: item.id, action: 'seek', value: t });
+      });
+
+    const ytTransport = document.createElement('div');
+    ytTransport.className = 'yt-transport three';
+    ytTransport.appendChild(playBtn);
+    ytTransport.appendChild(pauseBtn);
+    ytTransport.appendChild(ytHideBtn);
+    ytControls.appendChild(ytTransport);
+    ytControls.appendChild(ytTimeline);
     ytControls.appendChild(volControl);
+    ytControls.appendChild(ytSiteVol);
     li.appendChild(ytControls);
   }
 
-  if (item.type === 'browser') {
+  if (item.shape && window.buildShapeControls) {
+    li.appendChild(window.buildShapeControls(item));
+  }
+
+  if (item.type === 'browser' && item.timer && window.buildTimerControls) {
+    li.appendChild(window.buildTimerControls(item));
+  }
+
+  if (item.type === 'browser' && !item.timer) {
     const bControls = document.createElement('div');
-    bControls.className = 'media-card-row';
-    bControls.style.display = 'flex'; bControls.style.gap = '6px'; bControls.style.alignItems = 'center'; bControls.style.flexWrap = 'wrap';
+    bControls.className = 'yt-transport';
 
     const reloadBtn = document.createElement('button');
     reloadBtn.textContent = '🔄 Обновить'; reloadBtn.className = 'secondary';
@@ -2069,13 +2610,12 @@ function addMediaToList(item) {
 
   if (item.type === 'video') {
     const vControls = document.createElement('div');
-    vControls.className = 'media-card-row';
-    vControls.style.display = 'flex'; vControls.style.gap = '6px'; vControls.style.alignItems = 'center'; vControls.style.flexWrap = 'wrap';
+    vControls.className = 'media-card-stack';
 
     // Начать сначала — перематывает на 0 и запускает, плюс возвращает
     // видимость на 100%, если до этого было скрыто прозрачностью
     const restartBtn = document.createElement('button');
-    restartBtn.textContent = '⏮'; restartBtn.className = 'secondary'; restartBtn.title = 'Начать сначала';
+    restartBtn.textContent = '⏮'; restartBtn.className = 'secondary vc-restart'; restartBtn.title = 'Начать сначала';
     restartBtn.onclick = () => {
       checkpoint();
       item.hidden = false;
@@ -2094,25 +2634,27 @@ function addMediaToList(item) {
       const canvasHideBtn = cEl ? cEl.querySelector('.item-btn:nth-child(3)') : null;
       if (canvasHideBtn) canvasHideBtn.textContent = '👁';
       hideShowBtn.textContent = '🙈 Скрыть';
-      pauseBtn.textContent = '⏸ Пауза';
+      pauseBtn.textContent = '❚❚ Пауза';
     };
 
     // Пауза/Продолжить — переключатель: жмёшь один раз — стоп на месте,
     // жмёшь ещё раз — играет дальше с того же места (не сначала)
     const pauseBtn = document.createElement('button');
-    pauseBtn.textContent = '⏸ Пауза'; pauseBtn.className = 'secondary'; pauseBtn.title = 'Пауза / продолжить с того же места';
+    pauseBtn.textContent = (document.getElementById('vid-' + item.id) && document.getElementById('vid-' + item.id).paused) ? '▶ Играть' : '❚❚ Пауза';
+    pauseBtn.className = 'vc-main'; pauseBtn.title = 'Пауза / продолжить с того же места';
     pauseBtn.onclick = () => {
+      if (item.hidden) { toggleHidden(item); return; }
       checkpoint();
       const localVid = document.getElementById('vid-' + item.id);
       const isPaused = localVid ? localVid.paused : false;
       if (isPaused) {
         if (localVid) localVid.play().catch(() => {});
         socket.emit('video-control', { id: item.id, action: 'resume' });
-        pauseBtn.textContent = '⏸ Пауза';
+        pauseBtn.textContent = '❚❚ Пауза';
       } else {
         if (localVid) localVid.pause();
         socket.emit('video-control', { id: item.id, action: 'pause' });
-        pauseBtn.textContent = '▶ Продолжить';
+        pauseBtn.textContent = '▶ Играть';
       }
     };
 
@@ -2128,7 +2670,7 @@ function addMediaToList(item) {
     };
 
     const loopLabel = document.createElement('label');
-    loopLabel.style.display = 'flex'; loopLabel.style.alignItems = 'center'; loopLabel.style.gap = '3px'; loopLabel.style.fontSize = '12px';
+    loopLabel.className = 'switch';
     const loopCheckbox = document.createElement('input');
     loopCheckbox.type = 'checkbox'; loopCheckbox.checked = !!item.loop;
     loopCheckbox.onchange = () => {
@@ -2138,15 +2680,18 @@ function addMediaToList(item) {
       if (localVid) localVid.loop = item.loop;
       sendUpdate(item);
     };
+    const loopTrack = document.createElement('span');
+    loopTrack.className = 'track';
     loopLabel.appendChild(loopCheckbox);
-    loopLabel.appendChild(document.createTextNode('Зациклить'));
+    loopLabel.appendChild(loopTrack);
+    loopLabel.appendChild(document.createTextNode('Повторять по кругу'));
 
-    const obsVolControl = createPercentControl('obsvol-' + item.id, '🔊 OBS', item.volume, 5, 'Громкость в OBS (на стриме)', (v) => {
+    const obsVolControl = createPercentControl('obsvol-' + item.id, 'Громкость на стриме', item.volume, 5, 'Громкость в OBS (на стриме)', (v) => {
       item.volume = v;
       sendUpdate(item);
     });
 
-    const siteVolControl = createPercentControl('sitevol-' + item.id, '🎧 Сайт', 0, 5, 'Громкость только у тебя на сайте (не влияет на стрим)', (v) => {
+    const siteVolControl = createPercentControl('sitevol-' + item.id, 'Громкость у меня (не на стриме)', 80, 5, 'Громкость только у тебя на сайте (не влияет на стрим)', (v) => {
       const localVid = document.getElementById('vid-' + item.id);
       if (localVid) {
         localVid.muted = false;
@@ -2154,9 +2699,24 @@ function addMediaToList(item) {
       }
     });
 
-    vControls.appendChild(restartBtn);
-    vControls.appendChild(pauseBtn);
-    vControls.appendChild(hideShowBtn);
+    const transport = document.createElement('div');
+    transport.className = 'vc-transport';
+    transport.appendChild(restartBtn);
+    transport.appendChild(pauseBtn);
+    transport.appendChild(hideShowBtn);
+    const vTimeline = createTimeline(item,
+      () => {
+        const v = document.getElementById('vid-' + item.id);
+        return v ? { cur: v.currentTime || 0, dur: isFinite(v.duration) ? v.duration : 0 } : { cur: 0, dur: 0 };
+      },
+      (t) => {
+        const v = document.getElementById('vid-' + item.id);
+        if (v) v.currentTime = t;
+        socket.emit('video-control', { id: item.id, action: 'seek', time: t });
+      });
+
+    vControls.appendChild(transport);
+    vControls.appendChild(vTimeline);
     vControls.appendChild(loopLabel);
     vControls.appendChild(obsVolControl);
     vControls.appendChild(siteVolControl);
@@ -2165,7 +2725,7 @@ function addMediaToList(item) {
 
   // Прозрачность — доступна для любого типа объекта
   const opacityControl = createPercentControl(
-    'opacity-' + item.id, '👻 Прозрачность', item.opacity, 5,
+    'opacity-' + item.id, 'Прозрачность', item.opacity, 5,
     'Прозрачность на стриме (100% — полностью видно)',
     (v) => {
       item.opacity = v;
@@ -2174,13 +2734,12 @@ function addMediaToList(item) {
       sendUpdate(item);
     }
   );
-  opacityControl.className = 'media-card-row';
+  opacityControl.classList.add('media-card-row');
   li.appendChild(opacityControl);
 
   // Поворот — доступен для любого типа объекта
   const rotationWrap = document.createElement('div');
-  rotationWrap.className = 'media-card-row';
-  rotationWrap.style.display = 'flex'; rotationWrap.style.alignItems = 'center'; rotationWrap.style.gap = '4px';
+  rotationWrap.className = 'rot-row';
 
   function setRotation(deg) {
     deg = ((deg % 360) + 360) % 360;
@@ -2195,14 +2754,14 @@ function addMediaToList(item) {
   }
 
   const rotationControl = createPercentControl(
-    'rotation-' + item.id, '🔄 Поворот', item.rotation, 15,
+    'rotation-' + item.id, 'Поворот', item.rotation, 15,
     'Точный поворот в градусах',
     (v) => setRotation(v),
     360, '°'
   );
 
   const rotateRightBtn = document.createElement('button');
-  rotateRightBtn.textContent = '⟳ +90°'; rotateRightBtn.className = 'secondary';
+  rotateRightBtn.textContent = '+90°'; rotateRightBtn.className = 'secondary';
   rotateRightBtn.title = 'Повернуть на 90°';
   rotateRightBtn.onclick = () => { checkpoint(); setRotation((item.rotation || 0) + 90); };
 
@@ -2259,20 +2818,35 @@ const expandedFolders = new Set();
 function renderFoldersList() {
   const foldersListEl = document.getElementById('folders-list');
   foldersListEl.innerHTML = '';
+
+  function makeDropTarget(el, folderId) {
+    el.addEventListener('dragover', (e) => { e.preventDefault(); el.classList.add('drop-over'); });
+    el.addEventListener('dragleave', () => el.classList.remove('drop-over'));
+    el.addEventListener('drop', (e) => {
+      e.preventDefault();
+      el.classList.remove('drop-over');
+      const itemId = e.dataTransfer.getData('text/plain');
+      if (itemId) { checkpoint(); socket.emit('assign-folder', { itemId, folderId }); }
+    });
+  }
+
+  if (Object.keys(foldersLocal).length === 0) {
+    const empty = document.createElement('li');
+    empty.className = 'folder-empty';
+    empty.textContent = 'Папок пока нет. Создай первую — например, «Мемы» или «Алерты».';
+    foldersListEl.appendChild(empty);
+  }
+
   Object.values(foldersLocal).forEach((f) => {
     const li = document.createElement('li');
-    li.style.flexDirection = 'column';
-    li.style.alignItems = 'stretch';
+    li.className = 'folder';
 
     const topRow = document.createElement('div');
-    topRow.style.display = 'flex';
-    topRow.style.justifyContent = 'space-between';
-    topRow.style.alignItems = 'center';
-    topRow.style.gap = '6px';
+    topRow.className = 'folder-top';
 
     const toggleBtn = document.createElement('button');
-    toggleBtn.className = 'secondary';
-    toggleBtn.textContent = expandedFolders.has(f.id) ? '▼' : '▶';
+    toggleBtn.className = 'ghost';
+    toggleBtn.textContent = expandedFolders.has(f.id) ? '▾' : '▸';
     toggleBtn.title = 'Развернуть/свернуть';
     toggleBtn.onclick = () => {
       if (expandedFolders.has(f.id)) expandedFolders.delete(f.id);
@@ -2281,19 +2855,17 @@ function renderFoldersList() {
     };
 
     const label = document.createElement('span');
-    label.textContent = '🗂 ' + f.name + ' (' + f.memberIds.length + ')';
-    label.style.flex = '1';
-
-    const btns = document.createElement('div');
-    btns.style.display = 'flex'; btns.style.gap = '6px';
-
-    const selectBtn = document.createElement('button');
-    selectBtn.textContent = 'Выделить всё';
-    selectBtn.onclick = () => selectMany(f.memberIds);
+    label.className = 'folder-name';
+    label.textContent = f.name;
+    const count = document.createElement('span');
+    count.className = 'folder-count';
+    count.textContent = f.memberIds.length;
+    label.appendChild(count);
 
     const renameBtn = document.createElement('button');
-    renameBtn.textContent = '✏️ Переименовать';
-    renameBtn.className = 'secondary';
+    renameBtn.textContent = '✏️';
+    renameBtn.className = 'ghost';
+    renameBtn.title = 'Переименовать папку';
     renameBtn.onclick = () => {
       const newName = prompt('Новое название папки:', f.name);
       if (newName && newName.trim()) {
@@ -2303,31 +2875,38 @@ function renderFoldersList() {
     };
 
     const delBtn = document.createElement('button');
-    delBtn.textContent = 'Удалить папку';
-    delBtn.className = 'secondary';
-    delBtn.onclick = () => { checkpoint(); socket.emit('delete-folder', f.id); };
+    delBtn.textContent = '✕';
+    delBtn.className = 'ghost';
+    delBtn.title = 'Удалить папку (объекты останутся на сцене)';
+    delBtn.onclick = () => {
+      if (!confirm('Удалить папку «' + f.name + '»? Объекты останутся на сцене.')) return;
+      checkpoint();
+      socket.emit('delete-folder', f.id);
+    };
 
-    btns.appendChild(selectBtn);
-    btns.appendChild(renameBtn);
-    btns.appendChild(delBtn);
     topRow.appendChild(toggleBtn);
     topRow.appendChild(label);
-    topRow.appendChild(btns);
+    topRow.appendChild(renameBtn);
+    topRow.appendChild(delBtn);
     li.appendChild(topRow);
 
-    // Развёрнутый список объектов внутри папки — можно выделить по одному
+    const actions = document.createElement('div');
+    actions.className = 'folder-actions';
+    const selectBtn = document.createElement('button');
+    selectBtn.className = 'secondary';
+    selectBtn.textContent = 'Выделить всё';
+    selectBtn.onclick = () => { selectMany(f.memberIds); if (window.switchTab) switchTab('layers'); };
+    actions.appendChild(selectBtn);
+    li.appendChild(actions);
+
     if (expandedFolders.has(f.id)) {
       const subList = document.createElement('ul');
-      subList.style.listStyle = 'none';
-      subList.style.padding = '0';
-      subList.style.margin = '8px 0 0 24px';
+      subList.className = 'folder-items';
 
       if (f.memberIds.length === 0) {
         const emptyLi = document.createElement('li');
+        emptyLi.className = 'folder-empty';
         emptyLi.textContent = 'Папка пуста';
-        emptyLi.style.color = '#888';
-        emptyLi.style.fontSize = '13px';
-        emptyLi.style.padding = '4px 0';
         subList.appendChild(emptyLi);
       }
 
@@ -2335,81 +2914,646 @@ function renderFoldersList() {
         const it = mediaItemsLocal[itemId];
         if (!it) return;
         const subLi = document.createElement('li');
-        subLi.style.display = 'flex';
-        subLi.style.justifyContent = 'space-between';
-        subLi.style.alignItems = 'center';
-        subLi.style.background = '#2a1933';
-        subLi.style.padding = '5px 10px';
-        subLi.style.marginBottom = '4px';
-        subLi.style.borderRadius = '5px';
+        subLi.className = 'folder-item';
 
         const typeLabel = it.type === 'image' ? 'Картинка' : it.type === 'video' ? 'Видео' : it.type === 'youtube' ? 'YouTube' : it.type === 'text' ? 'Текст' : it.type === 'browser' ? 'Браузер' : 'OBS Ninja';
         const subLabel = document.createElement('span');
         subLabel.textContent = it.label ? it.label : typeLabel;
-        subLabel.style.fontSize = '13px';
-
-        const subBtns = document.createElement('div');
-        subBtns.style.display = 'flex'; subBtns.style.gap = '4px';
 
         const subSelectBtn = document.createElement('button');
         subSelectBtn.textContent = 'Выделить';
         subSelectBtn.className = 'secondary';
-        subSelectBtn.style.fontSize = '12px';
-        subSelectBtn.style.padding = '4px 8px';
-        subSelectBtn.onclick = () => selectOnly(itemId);
+        subSelectBtn.onclick = () => { selectOnly(itemId); if (window.switchTab) switchTab('layers'); };
 
         const subRemoveBtn = document.createElement('button');
-        subRemoveBtn.textContent = 'Убрать из папки';
-        subRemoveBtn.className = 'secondary';
-        subRemoveBtn.style.fontSize = '12px';
-        subRemoveBtn.style.padding = '4px 8px';
+        subRemoveBtn.textContent = '✕';
+        subRemoveBtn.className = 'ghost';
+        subRemoveBtn.title = 'Убрать из папки';
         subRemoveBtn.onclick = () => { checkpoint(); socket.emit('assign-folder', { itemId, folderId: null }); };
 
-        subBtns.appendChild(subSelectBtn);
-        subBtns.appendChild(subRemoveBtn);
         subLi.appendChild(subLabel);
-        subLi.appendChild(subBtns);
+        subLi.appendChild(subSelectBtn);
+        subLi.appendChild(subRemoveBtn);
         subList.appendChild(subLi);
       });
 
       li.appendChild(subList);
     }
 
-    // Перетащи строку медиа-объекта сюда — попадёт в эту папку
-    li.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      li.style.background = '#4e315e';
-    });
-    li.addEventListener('dragleave', () => { li.style.background = ''; });
-    li.addEventListener('drop', (e) => {
-      e.preventDefault();
-      li.style.background = '';
-      const itemId = e.dataTransfer.getData('text/plain');
-      if (itemId) { checkpoint(); socket.emit('assign-folder', { itemId, folderId: f.id }); }
-    });
-
+    makeDropTarget(li, f.id);
     foldersListEl.appendChild(li);
   });
 
-  // Отдельная зона, чтобы перетаскиванием убрать объект из всех папок
-  const noFolderLi = document.createElement('li');
-  noFolderLi.textContent = '↩ Перетащи сюда, чтобы убрать объект из папки';
-  noFolderLi.style.justifyContent = 'center';
-  noFolderLi.style.color = '#999';
-  noFolderLi.style.fontSize = '13px';
-  noFolderLi.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    noFolderLi.style.background = '#4e315e';
-  });
-  noFolderLi.addEventListener('dragleave', () => { noFolderLi.style.background = ''; });
-  noFolderLi.addEventListener('drop', (e) => {
-    e.preventDefault();
-    noFolderLi.style.background = '';
-    const itemId = e.dataTransfer.getData('text/plain');
-    if (itemId) { checkpoint(); socket.emit('assign-folder', { itemId, folderId: null }); }
-  });
-  foldersListEl.appendChild(noFolderLi);
+  if (Object.keys(foldersLocal).length > 0) {
+    const noFolderLi = document.createElement('li');
+    noFolderLi.className = 'folder-drop';
+    noFolderLi.textContent = 'Перетащи сюда, чтобы убрать объект из папки';
+    makeDropTarget(noFolderLi, null);
+    foldersListEl.appendChild(noFolderLi);
+  }
 }
+</script>
+<script>
+// ===== Интерфейс панели: вкладки, ширина панели, инспектор, мелочи =====
+(function () {
+  const sidebarEl = document.querySelector('.sidebar');
+  const emptyEl = document.getElementById('inspector-empty');
+  const inspectorTitle = document.getElementById('inspector-title');
+
+  function notifyLayoutChanged() {
+    window.dispatchEvent(new Event('resize'));
+  }
+
+  // --- Вкладки ---
+  function switchTab(name) {
+    document.querySelectorAll('.rail-tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
+    document.querySelectorAll('.pane').forEach((p) => p.classList.toggle('active', p.dataset.pane === name));
+    if (document.body.classList.contains('sidebar-collapsed')) {
+      setSidebarCollapsed(false);
+      notifyLayoutChanged();
+    }
+    try { localStorage.setItem('meowlay-tab', name); } catch (e) {}
+  }
+  window.switchTab = switchTab;
+  document.querySelectorAll('.rail-tab').forEach((t) => {
+    t.addEventListener('click', () => switchTab(t.dataset.tab));
+  });
+  try {
+    const savedTab = localStorage.getItem('meowlay-tab');
+    if (savedTab && document.querySelector('.pane[data-pane="' + savedTab + '"]')) {
+      document.querySelectorAll('.rail-tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === savedTab));
+      document.querySelectorAll('.pane').forEach((p) => p.classList.toggle('active', p.dataset.pane === savedTab));
+    }
+  } catch (e) {}
+  sidebarToggleBtn.addEventListener('click', notifyLayoutChanged);
+  document.getElementById('show-ui-btn').addEventListener('click', () => {
+    setSidebarCollapsed(false);
+    notifyLayoutChanged();
+  });
+  document.getElementById('panel-hide-btn').addEventListener('click', () => {
+    setSidebarCollapsed(true);
+    notifyLayoutChanged();
+  });
+  // Ctrl+B — скрыть/показать левую часть (работает и на русской раскладке)
+  document.addEventListener('keydown', (e) => {
+    if (!(e.ctrlKey || e.metaKey) || e.code !== 'KeyB') return;
+    e.preventDefault();
+    setSidebarCollapsed(!document.body.classList.contains('sidebar-collapsed'));
+    notifyLayoutChanged();
+  });
+
+  // --- Таймлайны: обновляем раз в полсекунды у открытых карточек ---
+  setInterval(() => {
+    document.querySelectorAll('.media-card.is-open .tl').forEach((tl) => { if (tl._refresh) tl._refresh(); });
+  }, 500);
+
+  // --- Сообщения от плееров YouTube на панели: текущее время и длительность ---
+  window.addEventListener('message', (e) => {
+    if (typeof e.data !== 'string' || e.data.indexOf('infoDelivery') === -1) return;
+    let msg;
+    try { msg = JSON.parse(e.data); } catch (err) { return; }
+    if (msg.event !== 'infoDelivery' || !msg.info) return;
+    const frames = document.querySelectorAll('iframe[id^="cmyt-"]');
+    for (const f of frames) {
+      if (f.contentWindow === e.source) {
+        const id = f.id.slice(5);
+        const info = ytInfo[id] || (ytInfo[id] = { cur: 0, dur: 0 });
+        if (typeof msg.info.currentTime === 'number') info.cur = msg.info.currentTime;
+        if (typeof msg.info.duration === 'number' && msg.info.duration > 0) info.dur = msg.info.duration;
+        break;
+      }
+    }
+  });
+
+  // --- Звук на панели включаем после первого клика (правило браузеров) ---
+  function unlockSiteAudio() {
+    Object.values(mediaItemsLocal).forEach((it) => {
+      if (it.hidden) return;
+      if (it.type === 'video') {
+        const v = document.getElementById('vid-' + it.id);
+        if (v) { v.muted = false; v.volume = getSiteVolume(it.id) / 100; }
+      } else if (it.type === 'youtube') {
+        ytPanelCommand(it.id, 'unMute');
+        ytPanelCommand(it.id, 'setVolume', [getSiteVolume(it.id)]);
+      }
+    });
+  }
+  window.addEventListener('pointerdown', unlockSiteAudio, { once: true, capture: true });
+
+  // --- Ширина панели (тянуть за правый край) ---
+  const PANEL_MIN = 260, PANEL_MAX = 560;
+  function setPanelWidth(w) {
+    w = Math.max(PANEL_MIN, Math.min(PANEL_MAX, Math.round(w)));
+    document.documentElement.style.setProperty('--panel-w', w + 'px');
+    return w;
+  }
+  try {
+    const savedW = parseInt(localStorage.getItem('meowlay-panel-w'), 10);
+    if (savedW) setPanelWidth(savedW);
+  } catch (e) {}
+  const resizer = document.getElementById('panel-resizer');
+  resizer.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = sidebarEl.getBoundingClientRect().width;
+    document.body.classList.add('resizing');
+    let lastW = startW;
+    function onMove(ev) { lastW = setPanelWidth(startW + ev.clientX - startX); notifyLayoutChanged(); }
+    function onUp() {
+      document.body.classList.remove('resizing');
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      try { localStorage.setItem('meowlay-panel-w', String(lastW)); } catch (e) {}
+    }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  });
+  resizer.addEventListener('dblclick', () => {
+    setPanelWidth(320);
+    try { localStorage.removeItem('meowlay-panel-w'); } catch (e) {}
+    notifyLayoutChanged();
+  });
+  notifyLayoutChanged();
+
+  // --- Инспектор: показываем карточки только выбранных объектов ---
+  function syncInspector() {
+    let open = 0;
+    Array.from(mediaListEl.children).forEach((li) => {
+      const on = selectedIds.has(li.dataset.id);
+      li.classList.toggle('is-open', on);
+      if (on) open++;
+    });
+    emptyEl.style.display = open ? 'none' : '';
+    inspectorTitle.textContent = open > 1 ? 'Выбрано: ' + open : 'Настройки';
+  }
+
+  function decorateElementRows() {
+    document.querySelectorAll('#elements-list .element-row').forEach((li) => {
+      const item = mediaItemsLocal[li.dataset.id];
+      if (!item) return;
+      li.classList.toggle('is-hidden', !!item.hidden);
+      if (item.timer) {
+        const th = li.querySelector('.element-thumb');
+        if (th) th.textContent = '⏱';
+      }
+      if (item.shape) {
+        const th = li.querySelector('.element-thumb');
+        if (th) { th.style.backgroundSize = 'contain'; th.style.backgroundRepeat = 'no-repeat'; }
+      }
+      if (item.type === 'text' && !item.label) {
+        const nm = li.querySelector('.element-name');
+        if (nm) { nm.textContent = item.text || 'Текст'; nm.title = nm.textContent; }
+      }
+      if (item.type !== 'video') return;
+      const vid = document.getElementById('vid-' + item.id);
+      const playing = vid ? !vid.paused : false;
+      const quick = document.createElement('button');
+      quick.className = 'element-quick' + (playing ? ' playing' : '');
+      quick.textContent = playing ? '❚❚' : '▶';
+      quick.title = playing ? 'Пауза' : 'Продолжить';
+      quick.draggable = false;
+      quick.addEventListener('mousedown', (ev) => ev.stopPropagation());
+      quick.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        const pauseBtn = document.querySelector('#li-' + CSS.escape(item.id) + ' .vc-main');
+        if (pauseBtn) pauseBtn.click();
+        renderElementsList();
+      });
+      const layerBtns = li.querySelector('.element-layer-btns');
+      li.insertBefore(quick, layerBtns);
+    });
+  }
+
+  const origRender = renderElementsList;
+  renderElementsList = function () {
+    origRender();
+    decorateElementRows();
+    syncInspector();
+  };
+  ['selectOnly', 'toggleSelect', 'selectMany', 'clearSelection'].forEach((name) => {
+    const orig = window[name];
+    window[name] = function () {
+      const r = orig.apply(this, arguments);
+      renderElementsList();
+      return r;
+    };
+  });
+  socket.on('clear-media', () => renderElementsList());
+  // Обновляем иконку ▶/❚❚ в списке, когда видео запускается или ставится на паузу
+  let renderQueued = false;
+  function queueRender() {
+    if (renderQueued) return;
+    renderQueued = true;
+    requestAnimationFrame(() => { renderQueued = false; renderElementsList(); });
+  }
+  ['play', 'pause'].forEach((evName) => {
+    document.addEventListener(evName, (e) => {
+      if (e.target && e.target.id && e.target.id.indexOf('vid-') === 0) queueRender();
+    }, true);
+  });
+  document.getElementById('clear-media-btn').addEventListener('click', () => renderElementsList());
+  renderElementsList();
+
+  // Новые объекты, добавленные этим модератором, сразу выделяем
+  const knownIds = new Set(Object.keys(mediaItemsLocal));
+  let pendingSelects = 0;
+  let pendingUntil = 0;
+  new MutationObserver((records) => {
+    records.forEach((r) => r.addedNodes.forEach((n) => {
+      if (!n.dataset || !n.dataset.id || knownIds.has(n.dataset.id)) return;
+      knownIds.add(n.dataset.id);
+      if (pendingSelects > 0 && Date.now() < pendingUntil) {
+        pendingSelects--;
+        selectOnly(n.dataset.id);
+      }
+    }));
+  }).observe(mediaListEl, { childList: true });
+  function expectNewItems(n) {
+    pendingSelects = n;
+    pendingUntil = Date.now() + 20000;
+    switchTab('layers');
+  }
+
+  // --- Добавление медиа ---
+  const typeSelect = document.getElementById('media-type');
+  const urlInput = document.getElementById('media-url');
+  const placeholders = {
+    image: 'Ссылка на картинку или GIF',
+    youtube: 'Ссылка на видео YouTube',
+    browser: 'Адрес сайта (чат, алерты, виджет)',
+    ninja: 'Ссылка из OBS.Ninja'
+  };
+  document.querySelectorAll('#media-type-seg button').forEach((b) => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#media-type-seg button').forEach((x) => x.classList.toggle('active', x === b));
+      typeSelect.value = b.dataset.type;
+      typeSelect.dispatchEvent(new Event('change'));
+      urlInput.placeholder = placeholders[b.dataset.type] || 'Вставь ссылку';
+      urlInput.focus();
+    });
+  });
+  urlInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('add-media-btn').click();
+  });
+  const addBtn = document.getElementById('add-media-btn');
+  let urlBefore = '';
+  addBtn.addEventListener('click', () => { urlBefore = urlInput.value.trim(); }, { capture: true });
+  addBtn.addEventListener('click', () => {
+    if (urlBefore && urlInput.value === '') expectNewItems(1);
+  });
+
+  const fileInput = document.getElementById('media-file');
+  fileInput.addEventListener('change', (e) => {
+    const n = (e.target.files || []).length;
+    if (n && authed) expectNewItems(n);
+  }, { capture: true });
+
+  const dropzone = document.getElementById('file-dropzone');
+  function hasFiles(e) { return e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files'); }
+  function dropFiles(e) {
+    const dt = new DataTransfer();
+    Array.from(e.dataTransfer.files).forEach((f) => {
+      if (f.type.startsWith('image/') || f.type.startsWith('video/')) dt.items.add(f);
+    });
+    if (!dt.files.length) return;
+    fileInput.files = dt.files;
+    fileInput.dispatchEvent(new Event('change'));
+  }
+  dropzone.addEventListener('dragover', (e) => { if (hasFiles(e)) { e.preventDefault(); dropzone.classList.add('over'); } });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('over'));
+  // Файлы можно бросить в любое место окна, не только в зону загрузки
+  window.addEventListener('dragover', (e) => { if (hasFiles(e)) e.preventDefault(); });
+  window.addEventListener('drop', (e) => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    dropzone.classList.remove('over');
+    dropFiles(e);
+  });
+
+  document.getElementById('elements-add-btn').addEventListener('click', () => {
+    switchTab('add');
+    setTimeout(() => urlInput.focus(), 0);
+  });
+
+  // --- Подтверждение для необратимых кнопок ---
+  function guard(id, text) {
+    document.getElementById(id).addEventListener('click', (e) => {
+      if (!confirm(text)) { e.stopImmediatePropagation(); e.preventDefault(); }
+    }, { capture: true });
+  }
+  guard('clear-media-btn', 'Убрать всё медиа со сцены? Это увидят все, в том числе на стриме.');
+
+  // --- Рисование: быстрые цвета и значение толщины ---
+  const colorEl = document.getElementById('color');
+  document.querySelectorAll('#color-swatches .swatch').forEach((s) => {
+    s.addEventListener('click', () => {
+      colorEl.value = s.dataset.color;
+      colorEl.dispatchEvent(new Event('input'));
+      colorEl.dispatchEvent(new Event('change'));
+    });
+  });
+  const sizeEl = document.getElementById('size');
+  const sizeVal = document.getElementById('size-val');
+  sizeEl.addEventListener('input', () => { sizeVal.textContent = sizeEl.value; });
+  sizeVal.textContent = sizeEl.value;
+
+  // --- Замена объекта целиком (для текста и таймера): старый убираем, такой же с тем же id добавляем ---
+  function replaceItem(item, rebuildLocal) {
+    socket.emit('remove-media', item.id);
+    socket.emit('add-media', item);
+    if (rebuildLocal) {
+      const wasSelected = selectedIds.has(item.id);
+      removeMediaLocal(item.id);
+      createOrUpdateMedia(item);
+      sortMediaList();
+      if (wasSelected) selectOnly(item.id);
+    }
+  }
+
+  // --- Текст: на стрим отправляем через 0.5 с после последнего нажатия ---
+  const textTimers = {};
+  let textFocus = null;
+  window.syncTextItem = function (item) {
+    clearTimeout(textTimers[item.id]);
+    textTimers[item.id] = setTimeout(() => {
+      textFocus = { id: item.id, until: Date.now() + 3000 };
+      replaceItem(item, false);
+    }, 500);
+  };
+  // Если сервер вернул нам наш же объект — карточка пересоздастся, возвращаем курсор в поле
+  socket.on('add-media', (it) => {
+    if (!textFocus || !it || it.id !== textFocus.id || Date.now() > textFocus.until) return;
+    textFocus = null;
+    selectOnly(it.id);
+    const inp = document.querySelector('#li-' + CSS.escape(it.id) + ' .text-edit');
+    if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+  });
+
+  // --- Таймер: это браузер-источник с маленькой страницей-счётчиком внутри ---
+  function buildTimerUrl(t) {
+    const showHours = t.total >= 3600;
+    const html = '<!doctype html><html><head><meta charset="utf-8"><style>' +
+      'html,body{margin:0;height:100%;background:transparent;overflow:hidden}' +
+      '#w{height:100%;display:flex;align-items:center;justify-content:center}' +
+      '#t{font-family:"Segoe UI",Arial,sans-serif;font-weight:700;font-variant-numeric:tabular-nums;' +
+      'white-space:nowrap;line-height:1;color:' + t.color + ';text-shadow:0 2px 6px rgba(0,0,0,.45)}' +
+      '</style></head><body><div id="w"><span id="t"></span></div><script>' +
+      'var R=' + (t.running ? 1 : 0) + ',E=' + (t.endAt || 0) + ',L=' + t.left + ',H=' + (showHours ? 1 : 0) + ';' +
+      'var el=document.getElementById("t");' +
+      'function p(n){return (n<10?"0":"")+n}' +
+      'function f(){var s=R?Math.max(0,Math.ceil((E-Date.now())/1000)):L;' +
+      'var h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;' +
+      'el.textContent=(H?h+":"+p(m):p(m))+":"+p(x);}' +
+      'function fit(){el.style.fontSize="100px";var k=Math.min(innerWidth*0.94/el.offsetWidth,innerHeight*0.9/el.offsetHeight);el.style.fontSize=(100*k)+"px";}' +
+      'f();fit();setInterval(f,250);addEventListener("resize",fit);' +
+      '<\/script></body></html>';
+    return 'data:text/html;base64,' + btoa(unescape(encodeURIComponent(html)));
+  }
+  function timerRemaining(t) {
+    return t.running ? Math.max(0, Math.ceil((t.endAt - Date.now()) / 1000)) : t.left;
+  }
+  function applyTimer(item) {
+    item.url = buildTimerUrl(item.timer);
+    replaceItem(item, true);
+  }
+  function clampNum(v, max) { v = parseInt(v, 10); return isNaN(v) ? 0 : Math.max(0, Math.min(max, v)); }
+
+  document.getElementById('add-timer-btn').addEventListener('click', () => {
+    if (!authed) return alert('Сначала дождись подключения');
+    const h = clampNum(document.getElementById('timer-h').value, 99);
+    const m = clampNum(document.getElementById('timer-m').value, 59);
+    const sec = clampNum(document.getElementById('timer-s').value, 59);
+    const total = h * 3600 + m * 60 + sec;
+    if (!total) return alert('Укажи время больше нуля');
+    const color = document.getElementById('timer-color').value;
+    const timer = { total, left: total, running: false, endAt: 0, color };
+    const id = 'id' + Date.now();
+    const item = {
+      id, type: 'browser', timer, url: buildTimerUrl(timer),
+      x: 0.4, y: 0.04, w: 0.2, h: 0.12, z: 9999, label: 'Таймер'
+    };
+    checkpoint();
+    socket.emit('add-media', item);
+    createOrUpdateMedia(item);
+    sortMediaList();
+    selectOnly(id);
+    switchTab('layers');
+  });
+
+  window.buildTimerControls = function (item) {
+    const t = item.timer;
+    const wrap = document.createElement('div');
+    wrap.className = 'media-card-stack';
+
+    const fields = document.createElement('div');
+    fields.className = 'timer-fields';
+    const rem = timerRemaining(t);
+    function numField(label, value, max) {
+      const l = document.createElement('label');
+      l.textContent = label;
+      const inp = document.createElement('input');
+      inp.type = 'number'; inp.min = 0; inp.max = max; inp.value = value;
+      l.appendChild(inp);
+      fields.appendChild(l);
+      return inp;
+    }
+    const hIn = numField('Часы', Math.floor(t.total / 3600), 99);
+    const mIn = numField('Минуты', Math.floor(t.total % 3600 / 60), 59);
+    const sIn = numField('Секунды', t.total % 60, 59);
+    const cl = document.createElement('label');
+    cl.textContent = 'Цвет';
+    const cIn = document.createElement('input');
+    cIn.type = 'color'; cIn.value = t.color;
+    cl.appendChild(cIn);
+    fields.appendChild(cl);
+
+    function onTimeChange() {
+      const total = clampNum(hIn.value, 99) * 3600 + clampNum(mIn.value, 59) * 60 + clampNum(sIn.value, 59);
+      if (!total) return;
+      checkpoint();
+      t.total = total; t.left = total; t.running = false; t.endAt = 0;
+      applyTimer(item);
+    }
+    [hIn, mIn, sIn].forEach((inp) => {
+      inp.addEventListener('change', onTimeChange);
+      inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur(); });
+    });
+    cIn.addEventListener('change', () => { checkpoint(); t.color = cIn.value; applyTimer(item); });
+
+    const actions = document.createElement('div');
+    actions.className = 'timer-actions';
+    const runBtn = document.createElement('button');
+    runBtn.className = 'vc-main';
+    runBtn.textContent = t.running ? '❚❚ Пауза' : (rem === t.total ? '▶ Старт' : '▶ Продолжить');
+    runBtn.onclick = () => {
+      checkpoint();
+      if (t.running) { t.left = timerRemaining(t); t.running = false; t.endAt = 0; }
+      else { if (!t.left) t.left = t.total; t.endAt = Date.now() + t.left * 1000; t.running = true; }
+      applyTimer(item);
+    };
+    const resetBtn = document.createElement('button');
+    resetBtn.className = 'secondary';
+    resetBtn.textContent = '↺ Сброс';
+    resetBtn.onclick = () => {
+      checkpoint();
+      t.left = t.total; t.running = false; t.endAt = 0;
+      applyTimer(item);
+    };
+    actions.appendChild(runBtn);
+    actions.appendChild(resetBtn);
+
+    wrap.appendChild(actions);
+    wrap.appendChild(fields);
+    [hIn, mIn, sIn, cIn, runBtn, resetBtn].forEach((c) => c.addEventListener('mousedown', (e) => e.stopPropagation()));
+    return wrap;
+  };
+
+  // --- Перетаскивание слоёв мышкой в списке ---
+  const elementsListEl = document.getElementById('elements-list');
+  let draggedId = null;
+  function clearDropMarks() {
+    elementsListEl.querySelectorAll('.drop-before, .drop-after, .dragging-row')
+      .forEach((r) => r.classList.remove('drop-before', 'drop-after', 'dragging-row'));
+  }
+  elementsListEl.addEventListener('dragstart', (e) => {
+    const row = e.target.closest && e.target.closest('.element-row');
+    if (!row) return;
+    draggedId = row.dataset.id;
+    row.classList.add('dragging-row');
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  elementsListEl.addEventListener('dragover', (e) => {
+    if (!draggedId) return;
+    const row = e.target.closest && e.target.closest('.element-row');
+    if (!row || row.dataset.id === draggedId) return;
+    e.preventDefault();
+    const box = row.getBoundingClientRect();
+    const before = e.clientY < box.top + box.height / 2;
+    elementsListEl.querySelectorAll('.drop-before, .drop-after').forEach((r) => r.classList.remove('drop-before', 'drop-after'));
+    row.classList.add(before ? 'drop-before' : 'drop-after');
+  });
+  elementsListEl.addEventListener('drop', (e) => {
+    if (!draggedId) return;
+    const row = e.target.closest && e.target.closest('.element-row');
+    if (!row || row.dataset.id === draggedId) { clearDropMarks(); return; }
+    e.preventDefault();
+    const box = row.getBoundingClientRect();
+    const before = e.clientY < box.top + box.height / 2;
+    const order = Object.values(mediaItemsLocal).sort((a, b) => (b.z || 0) - (a.z || 0)).map((it) => it.id);
+    const from = order.indexOf(draggedId);
+    if (from === -1) { clearDropMarks(); return; }
+    order.splice(from, 1);
+    let to = order.indexOf(row.dataset.id);
+    if (!before) to += 1;
+    order.splice(to, 0, draggedId);
+    checkpoint();
+    order.forEach((oid, i) => {
+      const z = order.length - i;
+      const it = mediaItemsLocal[oid];
+      if (it) it.z = z;
+      const el = document.getElementById('cm-' + oid);
+      if (el) el.style.zIndex = z;
+    });
+    socket.emit('reorder-media', order);
+    draggedId = null;
+    sortMediaList();
+  });
+  elementsListEl.addEventListener('dragend', () => { draggedId = null; clearDropMarks(); });
+
+  // --- Фигуры как слои: картинка с SVG внутри (оверлей показывает её как обычную картинку) ---
+  const SHAPE_NAMES = { rect: 'Квадрат', circle: 'Круг', star: 'Звезда' };
+  function buildShapeUrl(sh, w, h) {
+    const pw = Math.max(4, Math.round(w * 1280)), ph = Math.max(4, Math.round(h * 720));
+    const sw = sh.filled ? 0 : Math.max(1, sh.size);
+    const half = sw / 2;
+    const paint = sh.filled
+      ? 'fill="' + sh.color + '" stroke="none"'
+      : 'fill="none" stroke="' + sh.color + '" stroke-width="' + sw + '" stroke-linejoin="round"';
+    let body;
+    if (sh.type === 'circle') {
+      body = '<ellipse cx="' + pw / 2 + '" cy="' + ph / 2 + '" rx="' + Math.max(1, pw / 2 - half) +
+        '" ry="' + Math.max(1, ph / 2 - half) + '" ' + paint + '/>';
+    } else if (sh.type === 'star') {
+      const cx = pw / 2, cy = ph / 2, rx = pw / 2 - half, ry = ph / 2 - half;
+      const pts = [];
+      for (let i = 0; i < 10; i++) {
+        const r = i % 2 === 0 ? 1 : 0.45;
+        const a = -Math.PI / 2 + i * Math.PI / 5;
+        pts.push((cx + Math.cos(a) * rx * r).toFixed(1) + ',' + (cy + Math.sin(a) * ry * r).toFixed(1));
+      }
+      body = '<polygon points="' + pts.join(' ') + '" ' + paint + '/>';
+    } else {
+      body = '<rect x="' + half + '" y="' + half + '" width="' + Math.max(1, pw - sw) +
+        '" height="' + Math.max(1, ph - sw) + '" ' + paint + '/>';
+    }
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + pw + '" height="' + ph +
+      '" viewBox="0 0 ' + pw + ' ' + ph + '" preserveAspectRatio="none">' + body + '</svg>';
+    return 'data:image/svg+xml;base64,' + btoa(svg);
+  }
+
+  window.addShapeLayer = function (sh, x, y, w, h) {
+    const id = 'id' + Date.now() + Math.random().toString(36).slice(2, 6);
+    const item = {
+      id, type: 'image', shape: sh, url: buildShapeUrl(sh, w, h),
+      x, y, w, h, z: 9999, label: SHAPE_NAMES[sh.type] || 'Фигура'
+    };
+    socket.emit('add-media', item);
+    createOrUpdateMedia(item);
+    sortMediaList();
+    selectOnly(id);
+  };
+
+  window.buildShapeControls = function (item) {
+    const sh = item.shape;
+    const wrap = document.createElement('div');
+    wrap.className = 'media-card-stack';
+
+    function rebuild() {
+      item.url = buildShapeUrl(sh, item.w, item.h);
+      replaceItem(item, true);
+    }
+
+    const row = document.createElement('div');
+    row.className = 'row';
+    const cLbl = document.createElement('span');
+    cLbl.className = 'pc-label'; cLbl.textContent = 'Цвет';
+    const cIn = document.createElement('input');
+    cIn.type = 'color'; cIn.value = sh.color;
+    cIn.addEventListener('change', () => { checkpoint(); sh.color = cIn.value; rebuild(); });
+
+    const fillLbl = document.createElement('label');
+    fillLbl.className = 'switch';
+    fillLbl.style.marginLeft = 'auto';
+    const fillIn = document.createElement('input');
+    fillIn.type = 'checkbox'; fillIn.checked = !!sh.filled;
+    const tr = document.createElement('span'); tr.className = 'track';
+    fillLbl.appendChild(fillIn); fillLbl.appendChild(tr); fillLbl.appendChild(document.createTextNode('Заливка'));
+    fillIn.addEventListener('change', () => { checkpoint(); sh.filled = fillIn.checked; rebuild(); });
+
+    row.appendChild(cLbl); row.appendChild(cIn); row.appendChild(fillLbl);
+    wrap.appendChild(row);
+
+    if (!sh.filled) {
+      const thick = createPercentControl('shapesize-' + item.id, 'Толщина линии', sh.size, 1, 'Толщина контура',
+        (v) => {
+          sh.size = Math.max(1, v);
+          clearTimeout(thick._t);
+          thick._t = setTimeout(rebuild, 350);
+        }, 40, 'px');
+      wrap.appendChild(thick);
+    }
+
+    // Если фигуру растянули — перерисовываем, чтобы линия не стала толстой/тонкой
+    const fit = document.createElement('button');
+    fit.className = 'secondary';
+    fit.textContent = 'Выровнять толщину после растягивания';
+    fit.onclick = () => { checkpoint(); rebuild(); };
+    wrap.appendChild(fit);
+
+    [cIn, fillIn, fit].forEach((c) => c.addEventListener('mousedown', (e) => e.stopPropagation()));
+    return wrap;
+  };
+})();
 </script>
 </body>
 </html>
