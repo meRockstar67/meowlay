@@ -548,7 +548,7 @@
             <label>Цвет<input type="color" id="timer-color" value="#ffffff"></label>
           </div>
           <button id="add-timer-btn" class="full">Добавить таймер</button>
-          <span class="note">Появится сверху по центру сцены, его можно двигать и растягивать. Запуск — в настройках таймера.</span>
+          <span class="note">Появится под кадром, как остальные новые медиа: перетащи его на сцену. Запуск — в настройках таймера.</span>
         </div>
 
         <div class="divider"></div>
@@ -660,7 +660,7 @@
 <script>
 // ТЕСТОВЫЙ РЕЖИМ: без пароля и без ника. Если сервера нет (файл открыт
 // локально), работает без сети — всё двигается, но изменения никуда не уходят.
-const TEST_MODE = false;
+const TEST_MODE = true;
 const OFFLINE = typeof io === 'undefined';
 function createOfflineSocket() {
   const handlers = {};
@@ -2231,13 +2231,25 @@ document.getElementById('elements-add-btn').addEventListener('click', () => {
 renderElementsList();
 
 function sortMediaList() {
-  const lis = Array.from(mediaListEl.children);
-  lis.sort((a, b) => {
+  const current = Array.from(mediaListEl.children);
+  const lis = current.slice().sort((a, b) => {
     const za = (mediaItemsLocal[a.dataset.id] || {}).z || 0;
     const zb = (mediaItemsLocal[b.dataset.id] || {}).z || 0;
     return zb - za;
   });
-  lis.forEach((li) => mediaListEl.appendChild(li));
+  // Переставляем карточки, только если порядок реально поменялся:
+  // перемещение элемента сбрасывает курсор, если в нём сейчас печатают
+  const changed = lis.some((li, i) => li !== current[i]);
+  if (changed) {
+    const active = document.activeElement;
+    const inList = active && mediaListEl.contains(active);
+    const selStart = inList && 'selectionStart' in active ? active.selectionStart : null;
+    lis.forEach((li) => mediaListEl.appendChild(li));
+    if (inList && document.activeElement !== active) {
+      active.focus();
+      if (selStart !== null) { try { active.setSelectionRange(selStart, selStart); } catch (e) {} }
+    }
+  }
   renderElementsList();
 }
 
@@ -3258,36 +3270,46 @@ function renderFoldersList() {
   sizeVal.textContent = sizeEl.value;
 
   // --- Замена объекта целиком (для текста и таймера): старый убираем, такой же с тем же id добавляем ---
-  function replaceItem(item, rebuildLocal) {
-    socket.emit('remove-media', item.id);
-    socket.emit('add-media', item);
-    if (rebuildLocal) {
-      const wasSelected = selectedIds.has(item.id);
-      removeMediaLocal(item.id);
-      createOrUpdateMedia(item);
-      sortMediaList();
-      if (wasSelected) selectOnly(item.id);
+  // Объект пересоздаётся под НОВЫМ id: так ответ сервера про удаление
+  // старого не может случайно стереть новый (раньше таймер пропадал до F5)
+  function replaceItem(item) {
+    const oldId = item.id;
+    const wasSelected = selectedIds.has(oldId);
+    const active = document.activeElement;
+    const editingText = active && active.classList && active.classList.contains('text-edit') &&
+      active.closest('#li-' + CSS.escape(oldId));
+    const caret = editingText ? active.selectionStart : 0;
+
+    // Положение берём из актуальной копии (её мог обновить сервер), содержимое — из item
+    const cur = mediaItemsLocal[oldId] || item;
+    const geo = {};
+    ['x', 'y', 'w', 'h', 'z', 'zoom', 'offsetX', 'offsetY', 'cropW', 'cropH', 'rotation', 'opacity', 'hidden', 'label']
+      .forEach((k) => { if (cur[k] !== undefined) geo[k] = cur[k]; });
+    const fresh = Object.assign({}, item, geo, { id: 'id' + Date.now() + Math.random().toString(36).slice(2, 6) });
+    if (item.timer) fresh.timer = Object.assign({}, item.timer);
+    if (item.shape) fresh.shape = Object.assign({}, item.shape);
+
+    socket.emit('remove-media', oldId);
+    socket.emit('add-media', fresh);
+    removeMediaLocal(oldId);
+    createOrUpdateMedia(fresh);
+    sortMediaList();
+    if (wasSelected) selectOnly(fresh.id);
+    if (editingText) {
+      const inp = document.querySelector('#li-' + CSS.escape(fresh.id) + ' .text-edit');
+      if (inp) { inp.focus(); inp.setSelectionRange(caret, caret); }
     }
+    return fresh;
   }
 
   // --- Текст: на стрим отправляем через 0.5 с после последнего нажатия ---
   const textTimers = {};
-  let textFocus = null;
   window.syncTextItem = function (item) {
     clearTimeout(textTimers[item.id]);
     textTimers[item.id] = setTimeout(() => {
-      textFocus = { id: item.id, until: Date.now() + 3000 };
-      replaceItem(item, false);
+      if (mediaItemsLocal[item.id]) replaceItem(item);
     }, 500);
   };
-  // Если сервер вернул нам наш же объект — карточка пересоздастся, возвращаем курсор в поле
-  socket.on('add-media', (it) => {
-    if (!textFocus || !it || it.id !== textFocus.id || Date.now() > textFocus.until) return;
-    textFocus = null;
-    selectOnly(it.id);
-    const inp = document.querySelector('#li-' + CSS.escape(it.id) + ' .text-edit');
-    if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
-  });
 
   // --- Таймер: это браузер-источник с маленькой страницей-счётчиком внутри ---
   function buildTimerUrl(t) {
@@ -3314,7 +3336,7 @@ function renderFoldersList() {
   }
   function applyTimer(item) {
     item.url = buildTimerUrl(item.timer);
-    replaceItem(item, true);
+    replaceItem(item);
   }
   function clampNum(v, max) { v = parseInt(v, 10); return isNaN(v) ? 0 : Math.max(0, Math.min(max, v)); }
 
@@ -3328,9 +3350,10 @@ function renderFoldersList() {
     const color = document.getElementById('timer-color').value;
     const timer = { total, left: total, running: false, endAt: 0, color };
     const id = 'id' + Date.now();
+    const spawn = getSpawnPosition(); // под кадром, как остальные новые медиа
     const item = {
       id, type: 'browser', timer, url: buildTimerUrl(timer),
-      x: 0.4, y: 0.04, w: 0.2, h: 0.12, z: 9999, label: 'Таймер'
+      x: spawn.x, y: spawn.y, w: 0.2, h: 0.12, z: 9999, label: 'Таймер'
     };
     checkpoint();
     socket.emit('add-media', item);
@@ -3510,7 +3533,7 @@ function renderFoldersList() {
 
     function rebuild() {
       item.url = buildShapeUrl(sh, item.w, item.h);
-      replaceItem(item, true);
+      replaceItem(item);
     }
 
     const row = document.createElement('div');
