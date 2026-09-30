@@ -7,6 +7,7 @@ const { URL } = require('url');
 const { Server } = require('socket.io');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 
 const app = express();
 const server = http.createServer(app);
@@ -14,12 +15,64 @@ const server = http.createServer(app);
 const io = new Server(server, {
   maxHttpBufferSize: 25 * 1024 * 1024,
   pingInterval: 10000, // раньше проверяем, жив ли клиент
-  pingTimeout: 8000    // раньше признаём соединение мёртвым и рвём его
+  pingTimeout: 8000,   // раньше признаём соединение мёртвым и рвём его
+  // Сжатие сообщений сокета — state и прочий JSON уходят в разы меньше
+  perMessageDeflate: { threshold: 1024 }
 });
 
 const PASSWORD = process.env.MOD_PASSWORD || '6767';
 
+// Для UptimeRobot: крошечный ответ, чтобы пинг не тратил трафик
+// и не давал Render усыпить сервер
+app.get('/ping', (req, res) => res.type('text').send('ok'));
+
 app.use(express.static(path.join(__dirname, 'public')));
+
+// --- Загруженные файлы ---
+// Раньше картинки и видео хранились прямо в state в виде base64 и уходили
+// ЦЕЛИКОМ каждому клиенту: при каждом подключении, каждом Ctrl+Z и каждые
+// 15 секунд оверлею (периодический ресинк). Это и съедало весь трафик Render.
+// Теперь файл сохраняется на диск один раз, а в state лежит только ссылка
+// /uploads/<хеш>.<расширение>. Браузер/OBS скачивают файл один раз и кешируют.
+const UPLOAD_DIR = path.join(__dirname, 'data', 'uploads');
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+app.use('/uploads', express.static(UPLOAD_DIR, {
+  maxAge: '365d',
+  immutable: true
+}));
+
+const MIME_EXT = {
+  'image/png': 'png', 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/gif': 'gif',
+  'image/webp': 'webp', 'image/svg+xml': 'svg', 'image/avif': 'avif', 'image/bmp': 'bmp',
+  'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov', 'video/x-matroska': 'mkv',
+  'video/ogg': 'ogv', 'text/html': 'html'
+};
+const INLINE_LIMIT = 8 * 1024; // маленькие data:-ссылки (таймеры, фигуры) оставляем как есть
+
+// Если url — большая data:-ссылка, сохраняем её в файл и возвращаем /uploads/...
+function externalizeDataUrl(url) {
+  if (typeof url !== 'string' || !url.startsWith('data:') || url.length <= INLINE_LIMIT) return url;
+  const m = /^data:([^;,]+)(;base64)?,/.exec(url);
+  if (!m) return url;
+  const mime = m[1].toLowerCase();
+  const payload = url.slice(m[0].length);
+  let buf;
+  try {
+    buf = m[2] ? Buffer.from(payload, 'base64') : Buffer.from(decodeURIComponent(payload), 'utf8');
+  } catch (e) {
+    return url;
+  }
+  const hash = crypto.createHash('sha1').update(buf).digest('hex').slice(0, 20);
+  const name = hash + '.' + (MIME_EXT[mime] || 'bin');
+  const file = path.join(UPLOAD_DIR, name);
+  try {
+    if (!fs.existsSync(file)) fs.writeFileSync(file, buf);
+  } catch (e) {
+    console.error('Не удалось сохранить файл:', e.message);
+    return url;
+  }
+  return '/uploads/' + name;
+}
 
 // --- Прокси для "браузер-источников", которые запрещают показывать себя
 // во фрейме (X-Frame-Options / Content-Security-Policy), например ChatIS.
@@ -132,14 +185,63 @@ function loadState() {
     folders = data.folders || {};
     nextZ = data.nextZ || 1;
     nicknamesByIp = data.nicknamesByIp || {};
+    // Старые объекты с base64 внутри переносим в файлы
+    let migrated = 0;
+    for (const id in mediaItems) {
+      const before = mediaItems[id].url;
+      mediaItems[id].url = externalizeDataUrl(before);
+      if (mediaItems[id].url !== before) migrated++;
+    }
+    if (migrated) {
+      console.log('Перенесено в файлы: ' + migrated);
+      saveStateDebounced();
+    }
     console.log('Состояние восстановлено из файла (' + Object.keys(mediaItems).length + ' медиа-объектов)');
   } catch (e) {
     console.log('Сохранённого состояния не найдено — начинаем с чистого листа');
   }
 }
 
+// Номер версии состояния: оверлей раз в 15 сек спрашивает "у меня версия N,
+// есть что новое?" — если нет, отвечаем крошечным 'state-ok' вместо всего state
+let stateVersion = 1;
+function currentState() {
+  return { media: mediaItems, history, folders, version: stateVersion };
+}
+
+// Удаляем с диска файлы, на которые больше ничего не ссылается
+// (с учётом истории Ctrl+Z / Ctrl+Shift+Z, чтобы отмена не ломала картинки)
+let gcTimeout = null;
+function scheduleUploadsGc() {
+  clearTimeout(gcTimeout);
+  gcTimeout = setTimeout(() => {
+    try {
+      const used = new Set();
+      const collect = (items) => {
+        for (const id in items) {
+          const u = items[id] && items[id].url;
+          if (typeof u === 'string' && u.startsWith('/uploads/')) used.add(u.slice(9));
+        }
+      };
+      collect(mediaItems);
+      undoStack.forEach((s) => collect(s.mediaItems));
+      redoStack.forEach((s) => collect(s.mediaItems));
+      const now = Date.now();
+      fs.readdirSync(UPLOAD_DIR).forEach((name) => {
+        if (used.has(name)) return;
+        const file = path.join(UPLOAD_DIR, name);
+        const age = now - fs.statSync(file).mtimeMs;
+        if (age > 5 * 60 * 1000) fs.unlinkSync(file);
+      });
+    } catch (e) {
+      console.error('Ошибка очистки файлов:', e.message);
+    }
+  }, 60 * 1000);
+}
+
 let saveTimeout = null;
 function saveStateDebounced() {
+  stateVersion++;
   clearTimeout(saveTimeout);
   saveTimeout = setTimeout(() => {
     try {
@@ -221,7 +323,7 @@ io.on('connection', (socket) => {
       return;
     }
     authed = true;
-    socket.emit('state', { media: mediaItems, history, folders });
+    socket.emit('state', currentState());
 
     const savedNickname = nicknamesByIp[clientIp];
     if (savedNickname) {
@@ -253,8 +355,12 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('overlay-join', () => {
-    socket.emit('state', { media: mediaItems, history, folders });
+  socket.on('overlay-join', (knownVersion) => {
+    if (knownVersion && knownVersion === stateVersion) {
+      socket.emit('state-ok', stateVersion);
+      return;
+    }
+    socket.emit('state', currentState());
   });
 
   // Клиент шлёт это ПЕРЕД началом любого значимого действия (начало
@@ -274,8 +380,9 @@ io.on('connection', (socket) => {
     history = snapshot.history;
     folders = snapshot.folders;
     nextZ = snapshot.nextZ;
-    io.emit('state', { media: mediaItems, history, folders });
     saveStateDebounced();
+    io.emit('state', currentState());
+    scheduleUploadsGc();
   });
 
   socket.on('redo', () => {
@@ -288,8 +395,9 @@ io.on('connection', (socket) => {
     history = snapshot.history;
     folders = snapshot.folders;
     nextZ = snapshot.nextZ;
-    io.emit('state', { media: mediaItems, history, folders });
     saveStateDebounced();
+    io.emit('state', currentState());
+    scheduleUploadsGc();
   });
 
   socket.on('draw', (data) => {
@@ -318,11 +426,12 @@ io.on('connection', (socket) => {
   // Добавление медиа — сразу назначаем слой (z), отправитель получает
   // только маленькое подтверждение с z (без пересылки картинки обратно)
   socket.on('add-media', (item) => {
-    if (!authed) return;
+    if (!authed || !item || !item.id) return;
     item.z = nextZ++;
+    item.url = externalizeDataUrl(item.url);
     mediaItems[item.id] = item;
     socket.broadcast.emit('add-media', item);
-    socket.emit('set-z', { id: item.id, z: item.z });
+    socket.emit('set-z', { id: item.id, z: item.z, url: item.url });
     saveStateDebounced();
   });
 
@@ -383,6 +492,7 @@ io.on('connection', (socket) => {
     io.emit('remove-media', id);
     io.emit('folders-sync', folders);
     saveStateDebounced();
+    scheduleUploadsGc();
   });
 
   socket.on('clear-media', () => {
@@ -392,6 +502,7 @@ io.on('connection', (socket) => {
     io.emit('clear-media');
     io.emit('folders-sync', folders);
     saveStateDebounced();
+    scheduleUploadsGc();
   });
 
   socket.on('youtube-control', (data) => {
