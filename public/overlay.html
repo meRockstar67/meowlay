@@ -34,7 +34,12 @@ const socket = io();
 const mediaCache = {};
 let historyList = [];
 
-socket.on('connect', () => socket.emit('overlay-join'));
+// Версия состояния, которое уже есть у оверлея. При периодической проверке
+// сервер отвечает коротким 'state-ok', если ничего не поменялось, — и не
+// гоняет весь state каждые 15 секунд (раньше это съедало трафик Render)
+let knownVersion = 0;
+socket.on('connect', () => { knownVersion = 0; socket.emit('overlay-join', 0); });
+socket.on('state-ok', () => {});
 
 // Подстраховка на случай "тихо зависшего" сокета: соединение формально
 // остаётся открытым, но живые события (add-media/update-media и т.д.)
@@ -47,10 +52,11 @@ socket.on('connect', () => socket.emit('overlay-join'));
 // заметит и honoring timeout переподключится, а после реконнекта 'connect'
 // и так сработает заново.
 setInterval(() => {
-  if (socket.connected) socket.emit('overlay-join');
+  if (socket.connected) socket.emit('overlay-join', knownVersion);
 }, 15000);
 
 socket.on('state', (state) => {
+  if (state && state.version) knownVersion = state.version;
   // Раньше здесь сцена сносилась и пересобиралась с нуля целиком — это и
   // ломало YouTube/видео: пересоздание iframe/<video> = видео стартует заново.
   // Периодический ресинк (см. overlay-join выше) прилетает каждые 15 сек,
@@ -214,10 +220,13 @@ function applyHiddenState(el, item) {
     const v = document.getElementById('vid-' + item.id);
     if (v) {
       if (item.hidden) {
+        // Скрытое видео не играет вообще
         v.muted = true;
+        if (!v.paused) v.pause();
       } else {
         v.muted = false;
         v.volume = (item.volume !== undefined ? item.volume : 0) / 100;
+        if (hiddenChanged && v.paused && !v.ended) v.play().catch(() => {});
       }
     }
   } else if (item.type === 'youtube') {
@@ -319,9 +328,15 @@ function createOrUpdateMedia(item) {
       };
       [400, 1000, 2000, 3500].forEach((delay) => {
         setTimeout(() => {
-          sendYtCommand('unMute');
-          sendYtCommand('setVolume', [100]);
-          sendYtCommand('playVideo');
+          const cached = mediaCache[item.id] || item;
+          const vol = cached.volume !== undefined ? cached.volume : 100;
+          if (vol > 0) {
+            sendYtCommand('unMute');
+            sendYtCommand('setVolume', [vol]);
+          } else {
+            sendYtCommand('mute');
+          }
+          if (!cached.hidden) sendYtCommand('playVideo');
         }, delay);
       });
     }
@@ -414,7 +429,14 @@ socket.on('youtube-control', (data) => {
   let func = null, args = [];
   if (data.action === 'play') func = 'playVideo';
   else if (data.action === 'pause') func = 'pauseVideo';
-  else if (data.action === 'volume') { func = 'setVolume'; args = [data.value]; }
+  else if (data.action === 'volume') {
+    const cached = mediaCache[data.id];
+    if (cached) cached.volume = data.value;
+    // 0 — выключаем звук полностью, иначе включаем и ставим громкость
+    iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: data.value > 0 ? 'unMute' : 'mute', args: [] }), '*');
+    func = 'setVolume'; args = [data.value];
+  }
+  else if (data.action === 'seek' && typeof data.value === 'number') { func = 'seekTo'; args = [data.value, true]; }
   else if (data.action === 'mute') func = 'mute';
   else if (data.action === 'unmute') func = 'unMute';
   if (func) iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func, args }), '*');
@@ -441,7 +463,10 @@ socket.on('video-control', (data) => {
   } else if (data.action === 'pause') {
     videoEl.pause();
   } else if (data.action === 'resume') {
-    videoEl.play().catch(() => {});
+    const cached = mediaCache[data.id];
+    if (!cached || !cached.hidden) videoEl.play().catch(() => {});
+  } else if (data.action === 'seek' && typeof data.time === 'number') {
+    videoEl.currentTime = data.time;
   }
 });
 </script>
