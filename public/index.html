@@ -1512,6 +1512,12 @@ function createOrUpdateMedia(item) {
       inner.innerHTML = '<video id="vid-' + item.id + '" autoplay muted playsinline' +
         (item.loop ? ' loop' : '') + ' style="width:100%;height:100%;object-fit:cover;">' +
         '<source src="' + item.url + '"></video>';
+      const v = inner.querySelector('video');
+      v.addEventListener('error', () => {
+        console.warn('Видео не воспроизводится:', item.label);
+        if (!item._warned) { item._warned = true;
+          alert('Не удалось проиграть "' + (item.label || 'видео') + '". Скорее всего кодек ProRes/HEVC — перекодируй в WebM (VP9) или MP4 (H.264).'); }
+      }, true);
     } else if (item.type === 'text') {
       const textDiv = document.createElement('div');
       textDiv.className = 'text-content';
@@ -2061,8 +2067,14 @@ document.getElementById('media-file').addEventListener('change', (e) => {
       // Небольшой сдвиг по горизонтали для каждого файла в пачке, чтобы
       // они не легли друг на друга ровно в одной точке
       spawn.x = Math.min(0.85, spawn.x + index * 0.06);
+      let url = reader.result;
+      // .mov (video/quicktime) Chrome/OBS не играет по MIME — подменяем на mp4.
+      // Сработает, если внутри H.264. ProRes/HEVC браузер не декодирует вообще.
+      if (isVideo && (file.type === 'video/quicktime' || /\.mov$/i.test(file.name))) {
+        url = url.replace(/^data:[^;]*;/, 'data:video/mp4;');
+      }
       const item = {
-        id, type: isVideo ? 'video' : 'image', url: reader.result,
+        id, type: isVideo ? 'video' : 'image', url,
         x: spawn.x, y: spawn.y, w: 0.4, h: 0.4, z: 9999,
         hidden: false, loop: false, volume: 0, label: file.name
       };
