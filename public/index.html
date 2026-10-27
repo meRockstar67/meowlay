@@ -293,6 +293,8 @@
   .timer-fields input[type="color"] { height: 36px; width: 40px; }
   .timer-actions { display: grid; grid-template-columns: 1.4fr 1fr; gap: 6px; }
   .timer-actions button { height: 36px; }
+  .timer-add { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+  .timer-add button { padding: 6px 2px; font-size: 11.5px; white-space: nowrap; }
 
   /* Таймлайн видео */
   .tl { display: flex; flex-direction: column; gap: 4px; }
@@ -459,6 +461,26 @@
     content: ''; position: absolute; top: 14px; left: 50%; width: 1px; height: 12px;
     background: var(--warn); transform: translateX(-50%);
   }
+  /* Группа: у частей своих рамок и кнопок нет, вместо них одна общая рамка */
+  .media-item.in-group, .media-item.in-group.selected { outline: none; box-shadow: none; }
+  .media-item.in-group > .item-controls, .media-item.in-group > .resize-handle, .media-item.in-group > .rotate-handle { display: none; }
+  .group-frame {
+    position: absolute; outline: 2px dashed rgba(255, 122, 162, 0.7); outline-offset: 2px;
+    pointer-events: auto; cursor: move;
+  }
+  .group-frame.selected { outline: 3px solid var(--warn); box-shadow: 0 0 0 5px rgba(255, 200, 97, 0.25); }
+  /* Кнопки — над рамкой, ручка — за углом, и только при наведении/выделении,
+     чтобы ничего не закрывало содержимое группы */
+  .group-frame .item-controls { position: absolute; bottom: calc(100% + 8px); right: -4px; display: flex; gap: 4px; }
+  .group-frame:not(.selected):not(:hover) .item-controls,
+  .group-frame:not(.selected):not(:hover) .resize-handle { display: none; }
+  .group-frame .item-btn {
+    width: 28px; height: 28px; border-radius: 50%; background: var(--ink-1); color: var(--text);
+    border: 1px solid var(--ink-3); font-size: 13px; display: flex; align-items: center; justify-content: center; padding: 0;
+  }
+  .group-frame .item-btn:hover { background: var(--ink-3); }
+  .group-frame .item-btn.remove { background: var(--danger); border-color: var(--danger); color: #fff; }
+  .group-frame .resize-handle { right: -20px; bottom: -20px; }
   .hint { text-align: left; font-size: 12.5px; color: var(--faint); margin: 4px auto 0 auto; max-width: 1400px; line-height: 1.5; }
 
   @media (max-width: 760px) {
@@ -3418,6 +3440,8 @@ function renderFoldersList() {
     ['x', 'y', 'w', 'h', 'z', 'zoom', 'offsetX', 'offsetY', 'cropW', 'cropH', 'rotation', 'opacity', 'hidden', 'label']
       .forEach((k) => { if (cur[k] !== undefined) geo[k] = cur[k]; });
     const fresh = Object.assign({}, item, geo, { id: 'id' + Date.now() + Math.random().toString(36).slice(2, 6) });
+    // Группу берём тоже из актуальной копии — иначе таймер выпадал бы из группы
+    if (cur.groupId) fresh.groupId = cur.groupId; else delete fresh.groupId;
     if (item.timer) fresh.timer = Object.assign({}, item.timer);
     if (item.shape) fresh.shape = Object.assign({}, item.shape);
 
@@ -3461,7 +3485,8 @@ function renderFoldersList() {
   function serverNow() { return Date.now() + serverOffset; }
 
   function buildTimerUrl(t) {
-    const showHours = t.total >= 3600;
+    // Часы показываем, если их требует исходное время или добавленное сверху
+    const showHours = Math.max(t.total, timerRemaining(t)) >= 3600;
     const html = '<!doctype html><html><head><meta charset="utf-8"><style>' +
       'html,body{margin:0;height:100%;background:transparent;overflow:hidden}' +
       '#w{height:100%;display:flex;align-items:center;justify-content:center}' +
@@ -3577,9 +3602,31 @@ function renderFoldersList() {
     actions.appendChild(runBtn);
     actions.appendChild(resetBtn);
 
+    // Быстро добавить/убавить время — работает и на ходу: у идущего таймера
+    // просто сдвигаем момент окончания, отсчёт не останавливается
+    const addRow = document.createElement('div');
+    addRow.className = 'timer-add';
+    const addBtns = [[-60, '−1 мин'], [30, '+30 с'], [60, '+1 мин'], [120, '+2 мин'], [300, '+5 мин']].map(([sec, text]) => {
+      const b = document.createElement('button');
+      b.className = 'secondary';
+      b.textContent = text;
+      b.onclick = () => {
+        checkpoint();
+        if (t.running) {
+          t.endAt = Math.max(serverNow(), t.endAt + sec * 1000);
+        } else {
+          t.left = Math.max(0, (t.left || 0) + sec);
+        }
+        applyTimer(item);
+      };
+      addRow.appendChild(b);
+      return b;
+    });
+
     wrap.appendChild(actions);
+    wrap.appendChild(addRow);
     wrap.appendChild(fields);
-    [hIn, mIn, sIn, cIn, runBtn, resetBtn].forEach((c) => c.addEventListener('mousedown', (e) => e.stopPropagation()));
+    [hIn, mIn, sIn, cIn, runBtn, resetBtn].concat(addBtns).forEach((c) => c.addEventListener('mousedown', (e) => e.stopPropagation()));
     return wrap;
   };
 
@@ -3865,11 +3912,172 @@ function renderFoldersList() {
     });
   }
 
+  // --- Общая рамка группы на сцене ---
+  // Части группы прячут свои рамки и кнопки (класс in-group), а поверх них
+  // рисуется одна рамка по общим границам с кнопками «скрыть» и «удалить» и
+  // ручкой, которая растягивает всю группу пропорционально
+  const frames = {}; // groupId -> div.group-frame
+
+  function activeGroups() {
+    const groups = {};
+    Object.values(mediaItemsLocal).forEach((it) => {
+      if (!it.groupId || editingGroups.has(it.groupId)) return;
+      (groups[it.groupId] = groups[it.groupId] || []).push(it);
+    });
+    for (const gid in groups) if (groups[gid].length < 2) delete groups[gid];
+    return groups;
+  }
+
+  function groupBox(items) {
+    const x0 = Math.min(...items.map((it) => it.x)), y0 = Math.min(...items.map((it) => it.y));
+    const x1 = Math.max(...items.map((it) => it.x + it.w)), y1 = Math.max(...items.map((it) => it.y + it.h));
+    return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+  }
+
+  function membersOf(gid) { return groupMembers(gid).map((id) => mediaItemsLocal[id]).filter(Boolean); }
+
+  // Нажатие на рамку — передаём его первой части: её обычное перетаскивание
+  // и так двигает всё выделенное, а выделение у группы — вся группа
+  function forwardDrag(gid, e) {
+    const first = membersOf(gid)[0];
+    const el = first && document.getElementById('cm-' + first.id);
+    if (!el) return;
+    e.preventDefault();
+    e.stopPropagation();
+    el.dispatchEvent(new MouseEvent('mousedown', {
+      bubbles: true, cancelable: true, clientX: e.clientX, clientY: e.clientY, shiftKey: e.shiftKey, button: 0
+    }));
+  }
+
+  function startGroupResize(gid, e) {
+    e.preventDefault();
+    e.stopPropagation();
+    window.selectMany(groupMembers(gid));
+    checkpoint();
+    const items = membersOf(gid);
+    const box = groupBox(items);
+    const rect = canvasWrap.getBoundingClientRect();
+    const startX = e.clientX, startY = e.clientY;
+    const start = {};
+    items.forEach((it) => {
+      start[it.id] = { x: it.x, y: it.y, w: it.w, h: it.h,
+        cropW: it.cropW !== undefined ? it.cropW : it.w, cropH: it.cropH !== undefined ? it.cropH : it.h };
+    });
+    function onMove(ev) {
+      const sx = (box.w + (ev.clientX - startX) / rect.width) / box.w;
+      const sy = (box.h + (ev.clientY - startY) / rect.height) / box.h;
+      // Масштаб один на всю группу, чтобы части не разъехались и не исказились
+      const s = Math.max(0.1, Math.max(sx, sy));
+      items.forEach((it) => {
+        const st = start[it.id];
+        it.x = box.x + (st.x - box.x) * s;
+        it.y = box.y + (st.y - box.y) * s;
+        it.w = st.w * s; it.h = st.h * s;
+        it.cropW = st.cropW * s; it.cropH = st.cropH * s;
+        const el = document.getElementById('cm-' + it.id);
+        if (el) { applyPosition(el, it); applyCropTransform(el, it); }
+        sendUpdate(it);
+      });
+    }
+    function onUp() {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+
+  function frameButton(text, cls, title, onClick) {
+    const b = document.createElement('button');
+    b.className = 'item-btn' + (cls ? ' ' + cls : '');
+    b.title = title;
+    b.textContent = text;
+    b.addEventListener('mousedown', (ev) => ev.stopPropagation());
+    b.onclick = (ev) => { ev.stopPropagation(); onClick(); };
+    return b;
+  }
+
+  function createFrame(gid) {
+    const f = document.createElement('div');
+    f.className = 'group-frame';
+    const controls = document.createElement('div');
+    controls.className = 'item-controls';
+    const hideBtn = frameButton('👁', 'group-hide', 'Скрыть/показать всю группу', () => {
+      const items = membersOf(gid);
+      const hide = items.some((it) => !it.hidden);
+      items.forEach((it) => { if (!!it.hidden !== hide) toggleHidden(it); });
+    });
+    const removeBtn = frameButton('✕', 'remove', 'Удалить всю группу', () => {
+      checkpoint();
+      groupMembers(gid).forEach((id) => {
+        socket.emit('remove-media', id);
+        removeMediaLocal(id);
+      });
+    });
+    controls.appendChild(hideBtn);
+    controls.appendChild(removeBtn);
+    f.appendChild(controls);
+    const handle = document.createElement('div');
+    handle.className = 'resize-handle';
+    handle.title = 'Тяни — растянуть всю группу';
+    handle.addEventListener('mousedown', (e) => startGroupResize(gid, e));
+    f.appendChild(handle);
+    f.addEventListener('mousedown', (e) => {
+      if (e.target.closest('.item-btn') || e.target.closest('.resize-handle')) return;
+      forwardDrag(gid, e);
+    });
+    mediaLayer.appendChild(f);
+    return f;
+  }
+
+  function updateFrames() {
+    const groups = activeGroups();
+    for (const gid in frames) {
+      if (!groups[gid]) { frames[gid].remove(); delete frames[gid]; }
+    }
+    Object.values(mediaItemsLocal).forEach((it) => {
+      const el = document.getElementById('cm-' + it.id);
+      if (el) el.classList.toggle('in-group', !!(it.groupId && groups[it.groupId]));
+    });
+    for (const gid in groups) {
+      const items = groups[gid];
+      const f = frames[gid] || (frames[gid] = createFrame(gid));
+      if (!f.isConnected) mediaLayer.appendChild(f); // сцену могли пересобрать (Ctrl+Z)
+      const b = groupBox(items);
+      f.style.left = (b.x * 100) + '%';
+      f.style.top = (b.y * 100) + '%';
+      f.style.width = (b.w * 100) + '%';
+      f.style.height = (b.h * 100) + '%';
+      f.style.zIndex = Math.max(...items.map((it) => it.z || 0));
+      f.classList.toggle('selected', items.every((it) => selectedIds.has(it.id)));
+      const allHidden = items.every((it) => it.hidden);
+      f.style.opacity = allHidden ? 0.45 : '';
+      f.querySelector('.group-hide').textContent = allHidden ? '🙈' : '👁';
+    }
+  }
+
+  // Рамку двигаем вместе с частями: любое изменение позиции объекта проходит
+  // через applyPosition — после него в ближайшем кадре пересчитываем рамки
+  let framesQueued = false;
+  function queueFrames() {
+    if (framesQueued) return;
+    framesQueued = true;
+    requestAnimationFrame(() => { framesQueued = false; updateFrames(); });
+  }
+  const prevApplyPosition = window.applyPosition;
+  window.applyPosition = function () {
+    const r = prevApplyPosition.apply(this, arguments);
+    queueFrames();
+    return r;
+  };
+  socket.on('state', queueFrames);
+
   const prevRender = renderElementsList;
   renderElementsList = function () {
     prevRender();
     decorateRows();
     renderBar();
+    updateFrames();
   };
 
   document.addEventListener('keydown', (e) => {
