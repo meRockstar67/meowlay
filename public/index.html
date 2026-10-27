@@ -68,6 +68,18 @@
   }
   input::placeholder { color: var(--faint); }
   input:focus, select:focus { border-color: var(--accent); outline: none; }
+  #tts-text {
+    font: inherit; font-size: 12.5px; resize: vertical; min-height: 72px; box-sizing: border-box;
+    padding: 7px 9px; border-radius: var(--r-md);
+    border: 1px solid var(--line); background: var(--ink-0); color: var(--text);
+  }
+  #tts-text::placeholder { color: var(--faint); }
+  #tts-text:focus { border-color: var(--accent); outline: none; }
+  #tts-history { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  #tts-history li { display: flex; gap: 6px; align-items: center; padding: 6px 8px; border-radius: var(--r-md); background: var(--ink-1); }
+  #tts-history .tts-h-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #tts-history .tts-h-by { color: var(--faint); font-size: 11px; flex-shrink: 0; }
+  #tts-history button { padding: 4px 8px; flex-shrink: 0; }
   input[type="range"] { padding: 0; border: 0; background: transparent; accent-color: var(--accent); height: 18px; }
   input[type="color"] { padding: 2px; width: 34px; height: 30px; cursor: pointer; }
   input[type="checkbox"] { accent-color: var(--accent); }
@@ -471,6 +483,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2.5"/><path d="M8 21h8M12 17v4"/><path d="m10.5 9 3.5 2-3.5 2z" fill="currentColor"/></svg>
       Стрим
     </button>
+    <button class="rail-tab" data-tab="tts" title="Озвучка текста (ТТС)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>
+      ТТС
+    </button>
     <div class="rail-spacer"></div>
     <button id="sidebar-toggle-btn" title="Скрыть левую часть целиком (Ctrl+B)">◀</button>
   </nav>
@@ -626,6 +642,47 @@
           </div>
           <button id="twitch-interact-btn" class="secondary full">🖱 Управлять стримом (play/pause/звук)</button>
         </div>
+      </div>
+    </section>
+
+    <!-- ТТС -->
+    <section class="pane" data-pane="tts">
+      <div class="pane-head"><h2>Озвучка текста</h2></div>
+      <div class="pane-body">
+        <div class="group">
+          <textarea id="tts-text" class="full" rows="4" maxlength="500" placeholder="Что сказать на стриме?"></textarea>
+          <div class="pc-head"><span class="note">Ctrl+Enter — озвучить</span><span class="note" id="tts-count">0 / 500</span></div>
+        </div>
+
+        <div class="group">
+          <span class="group-title">Голос</span>
+          <div class="row">
+            <select id="tts-voice" class="grow">
+              <option value="google:ru">Google — Русский</option>
+            </select>
+            <button id="tts-voices-refresh" class="secondary" title="Обновить список голосов (например, после добавления своего голоса в ElevenLabs)">↻</button>
+          </div>
+        </div>
+
+        <div class="group">
+          <div class="pc-head"><span class="group-title">Громкость</span><span class="pc-val" id="tts-volume-val">80</span></div>
+          <input type="range" id="tts-volume" min="0" max="100" value="80" class="full">
+        </div>
+
+        <div class="group">
+          <div class="pc-head"><span class="group-title">Скорость</span><span class="pc-val" id="tts-rate-val">1.0×</span></div>
+          <input type="range" id="tts-rate" min="0.5" max="2" step="0.1" value="1" class="full">
+        </div>
+
+        <div class="row">
+          <button id="tts-send-btn" class="grow">🔊 Озвучить</button>
+          <button id="tts-stop-btn" class="danger" title="Остановить и очистить очередь на оверлее">■ Стоп</button>
+        </div>
+        <span class="note" id="tts-status">Фразы встают в очередь и звучат по одной. Звук идёт из оверлея — в OBS включи «Управлять звуком через OBS» у источника-браузера.</span>
+
+        <div class="divider"></div>
+        <span class="group-title">Недавние</span>
+        <ul id="tts-history"></ul>
       </div>
     </section>
   </aside>
@@ -3588,6 +3645,132 @@ function renderFoldersList() {
     [cIn, fillIn, fit].forEach((c) => c.addEventListener('mousedown', (e) => e.stopPropagation()));
     return wrap;
   };
+})();
+
+// --- ТТС: модератор пишет текст, сервер делает mp3, оверлей его проигрывает ---
+(function () {
+  const textEl = document.getElementById('tts-text');
+  const countEl = document.getElementById('tts-count');
+  const voiceEl = document.getElementById('tts-voice');
+  const volEl = document.getElementById('tts-volume');
+  const volVal = document.getElementById('tts-volume-val');
+  const rateEl = document.getElementById('tts-rate');
+  const rateVal = document.getElementById('tts-rate-val');
+  const sendBtn = document.getElementById('tts-send-btn');
+  const stopBtn = document.getElementById('tts-stop-btn');
+  const statusTts = document.getElementById('tts-status');
+  const historyEl = document.getElementById('tts-history');
+  const defaultStatus = statusTts.textContent;
+
+  // Голос, громкость и скорость запоминаем между заходами
+  let savedVoice = 'google:ru';
+  try {
+    const saved = JSON.parse(localStorage.getItem('meowlay-tts') || '{}');
+    if (saved.voice) savedVoice = saved.voice;
+    if (saved.volume !== undefined) volEl.value = saved.volume;
+    if (saved.rate !== undefined) rateEl.value = saved.rate;
+  } catch (e) {}
+  function saveSettings() {
+    savedVoice = voiceEl.value;
+    try {
+      localStorage.setItem('meowlay-tts', JSON.stringify({ voice: voiceEl.value, volume: volEl.value, rate: rateEl.value }));
+    } catch (e) {}
+  }
+
+  // Список голосов приходит с сервера: голоса ElevenLabs (если подключён
+  // ключ) и Google. Группируем по движку
+  socket.on('tts-voices', (voices) => {
+    voiceEl.innerHTML = '';
+    const groups = {};
+    voices.forEach((v) => {
+      if (!groups[v.group]) {
+        groups[v.group] = document.createElement('optgroup');
+        groups[v.group].label = v.group;
+        voiceEl.appendChild(groups[v.group]);
+      }
+      const opt = document.createElement('option');
+      opt.value = v.id;
+      opt.textContent = v.name;
+      groups[v.group].appendChild(opt);
+    });
+    voiceEl.value = savedVoice;
+    if (!voiceEl.value && voices.length) voiceEl.value = voices[0].id;
+  });
+  socket.on('auth-result', (res) => { if (res && res.ok) socket.emit('tts-voices'); });
+  document.getElementById('tts-voices-refresh').addEventListener('click', () => socket.emit('tts-voices', true));
+  function refreshLabels() {
+    volVal.textContent = volEl.value;
+    rateVal.textContent = Number(rateEl.value).toFixed(1) + '×';
+    countEl.textContent = textEl.value.length + ' / 500';
+  }
+  refreshLabels();
+  [voiceEl, volEl, rateEl].forEach((el) => el.addEventListener('input', () => { refreshLabels(); saveSettings(); }));
+  textEl.addEventListener('input', refreshLabels);
+
+  let pending = false;
+  function send(text) {
+    text = (text || '').trim();
+    if (!text || pending || !authed) return;
+    pending = true;
+    sendBtn.disabled = true;
+    statusTts.textContent = 'Генерирую озвучку…';
+    socket.emit('tts', { text, voice: voiceEl.value, volume: Number(volEl.value), rate: Number(rateEl.value) });
+  }
+
+  socket.on('tts-result', (res) => {
+    pending = false;
+    sendBtn.disabled = false;
+    if (res.ok) {
+      statusTts.textContent = '✅ Отправлено на оверлей';
+      textEl.value = '';
+      refreshLabels();
+      addToHistory(res.clip);
+    } else {
+      statusTts.textContent = '❌ Не получилось озвучить: ' + (res.error || 'ошибка сервера');
+    }
+    clearTimeout(send._t);
+    send._t = setTimeout(() => { statusTts.textContent = defaultStatus; }, 4000);
+  });
+  // Озвучки других модераторов тоже попадают в историю
+  socket.on('tts', addToHistory);
+
+  function addToHistory(clip) {
+    const li = document.createElement('li');
+    const t = document.createElement('span');
+    t.className = 'tts-h-text';
+    t.textContent = clip.text;
+    t.title = clip.text;
+    li.appendChild(t);
+    if (clip.by) {
+      const by = document.createElement('span');
+      by.className = 'tts-h-by';
+      by.textContent = clip.by;
+      li.appendChild(by);
+    }
+    const again = document.createElement('button');
+    again.className = 'secondary';
+    again.textContent = '↻';
+    again.title = 'Озвучить ещё раз';
+    again.onclick = () => send(clip.text);
+    li.appendChild(again);
+    historyEl.prepend(li);
+    while (historyEl.children.length > 15) historyEl.lastChild.remove();
+  }
+
+  sendBtn.addEventListener('click', () => send(textEl.value));
+  stopBtn.addEventListener('click', () => {
+    if (!authed) return;
+    socket.emit('tts-stop');
+    statusTts.textContent = '■ Озвучка остановлена';
+  });
+  textEl.addEventListener('keydown', (e) => {
+    // Ctrl+Z здесь — обычная отмена ввода, а не отмена действий на сцене
+    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') e.stopPropagation();
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      send(textEl.value);
+    }
+  });
 })();
 </script>
 </body>

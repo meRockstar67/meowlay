@@ -448,6 +448,42 @@ socket.on('browser-control', (data) => {
   if (frame && data.action === 'reload') frame.src = frame.src;
 });
 
+// --- ТТС: фразы играются строго по очереди, по одной ---
+// Обычный <audio>, а не speechSynthesis: так звук идёт через сам
+// источник-браузер и OBS может его захватить
+const ttsQueue = [];
+let ttsAudio = null;
+
+function playNextTts() {
+  if (ttsAudio || ttsQueue.length === 0) return;
+  const clip = ttsQueue.shift();
+  const audio = new Audio(clip.url);
+  audio.volume = (clip.volume !== undefined ? clip.volume : 80) / 100;
+  audio.playbackRate = clip.rate || 1;
+  ttsAudio = audio;
+  const done = () => {
+    if (ttsAudio !== audio) return;
+    ttsAudio = null;
+    playNextTts();
+  };
+  audio.addEventListener('ended', done);
+  audio.addEventListener('error', done);
+  audio.play().catch(done);
+}
+
+socket.on('tts', (clip) => {
+  ttsQueue.push(clip);
+  playNextTts();
+});
+
+socket.on('tts-stop', () => {
+  ttsQueue.length = 0;
+  if (ttsAudio) {
+    ttsAudio.pause();
+    ttsAudio = null;
+  }
+});
+
 // --- Управление загруженным видео (play всегда сначала, pause) ---
 socket.on('video-control', (data) => {
   const videoEl = document.getElementById('vid-' + data.id);

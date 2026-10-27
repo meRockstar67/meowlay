@@ -136,6 +136,171 @@ app.get('/proxy', (req, res) => {
   req.on('close', () => upstreamReq.destroy());
 });
 
+// --- ТТС (озвучка текста) ---
+// Модератор присылает текст и id голоса, сервер получает mp3 (Google
+// Translate TTS или ElevenLabs) и отдаёт оверлею короткую ссылку
+// /tts/<id>.mp3. Оверлей играет её обычным <audio>, поэтому звук попадает в
+// OBS вместе с источником-браузером (speechSynthesis в OBS почти никогда не
+// работает). Клипы живут только в памяти и через 10 минут удаляются: в state
+// и на диск они не попадают.
+//
+// id голоса — "<движок>:<параметр>": google:ru, eleven:<voice_id>.
+const TTS_MAX_TEXT = 500;
+const TTS_CHUNK = 190; // у Google лимит ~200 символов на один запрос
+const TTS_TTL = 10 * 60 * 1000;
+const ttsClips = new Map(); // id -> { buf, expires }
+
+const GOOGLE_VOICES = [
+  ['ru', 'Русский'], ['en', 'English'], ['uk', 'Українська'], ['de', 'Deutsch'],
+  ['fr', 'Français'], ['es', 'Español'], ['it', 'Italiano'], ['pl', 'Polski'],
+  ['ja', '日本語'], ['ko', '한국어'], ['zh-CN', '中文']
+].map(([lang, name]) => ({ id: 'google:' + lang, name: 'Google — ' + name, group: 'Google' }));
+
+// ElevenLabs включается сам, если в .env (или в Environment на Render) есть
+// ELEVENLABS_API_KEY. Список голосов берём прямо из аккаунта — поэтому
+// свой клонированный голос появится в панели сам, ничего править не надо.
+const ELEVEN_KEY = process.env.ELEVENLABS_API_KEY || '';
+const ELEVEN_MODEL = process.env.ELEVENLABS_MODEL || 'eleven_multilingual_v2';
+
+// Стандартные голоса ElevenLabs — доступны на любом плане. Нужны, когда у
+// ключа нет права voices_read и список из аккаунта получить нельзя
+const ELEVEN_STANDARD = [
+  ['Adam', 'pNInz6obpgDQGcFmaJgB', 'м'], ['Alice', 'Xb7hH8MSUJpSbSDYk0k2', 'ж'],
+  ['Brian', 'nPczCjzI2devNBz1zQrb', 'м'], ['Callum', 'N2lVS1w4EtoT3dr4eOWO', 'м'],
+  ['Charlie', 'IKne3meq5aSn9XLyUdCD', 'м'], ['Chris', 'iP95p4xoKVk53GoZ742B', 'м'],
+  ['Daniel', 'onwK4e9ZLuTAKqWW03F9', 'м'], ['Eric', 'cjVigY5qzO86Huf0OWal', 'м'],
+  ['George', 'JBFqnCBsd6RMkjVDRZzb', 'м'], ['Jessica', 'cgSgspJ2msm6clMCkdW9', 'ж'],
+  ['Laura', 'FGY2WhTYpPnrIDTdsKH5', 'ж'], ['Liam', 'TX3LPaxmHKxFdv7VOQHJ', 'м'],
+  ['Lily', 'pFZP5JQG7iQjIQuC4Bku', 'ж'], ['Matilda', 'XrExE9yKIg1WjnnlVkGX', 'ж'],
+  ['River', 'SAz9YHcvj6GT2YYXdXww', '—'], ['Roger', 'CwhRBWXzGAHq8TQ4Fs17', 'м'],
+  ['Sarah', 'EXAVITQu4vr4xnSDxMaL', 'ж'], ['Will', 'bIHbv24MWmeRgasZH58o', 'м']
+].map(([name, id, g]) => ({ id: 'eleven:' + id, name: name + ' (' + g + ')', group: 'ElevenLabs' }));
+
+// Свои голоса вручную: ELEVENLABS_VOICES=Мой голос=voice_id,Ещё один=voice_id
+// (voice_id — в ElevenLabs: Voices → у голоса «Copy voice ID»)
+const ELEVEN_CUSTOM = (process.env.ELEVENLABS_VOICES || '').split(',').map((s) => s.trim()).filter(Boolean)
+  .map((pair) => {
+    const eq = pair.lastIndexOf('=');
+    return eq > 0 ? { id: 'eleven:' + pair.slice(eq + 1).trim(), name: '★ ' + pair.slice(0, eq).trim(), group: 'ElevenLabs' } : null;
+  }).filter(Boolean);
+
+let elevenVoices = [];
+let elevenVoicesAt = 0;
+
+async function loadElevenVoices(force) {
+  if (!ELEVEN_KEY) return [];
+  if (!force && elevenVoicesAt && Date.now() - elevenVoicesAt < 10 * 60 * 1000) return elevenVoices;
+  let fromAccount = null;
+  try {
+    const res = await fetch('https://api.elevenlabs.io/v1/voices', { headers: { 'xi-api-key': ELEVEN_KEY } });
+    if (!res.ok) throw new Error('ElevenLabs ответил ' + res.status);
+    const data = await res.json();
+    fromAccount = (data.voices || []).map((v) => ({
+      id: 'eleven:' + v.voice_id,
+      // Свои (клонированные) голоса помечаем звёздочкой
+      name: (v.category === 'cloned' || v.category === 'professional' ? '★ ' : '') + v.name,
+      group: 'ElevenLabs'
+    }));
+  } catch (e) {
+    // Обычно это ключ без права voices_read — тогда берём стандартный список
+    console.log('Список голосов ElevenLabs недоступен (' + e.message + '), беру стандартные');
+  }
+  const all = ELEVEN_CUSTOM.concat(fromAccount && fromAccount.length ? fromAccount : ELEVEN_STANDARD);
+  const seen = new Set();
+  elevenVoices = all.filter((v) => !seen.has(v.id) && seen.add(v.id))
+    // Свои голоса (★) первыми, остальные по алфавиту
+    .sort((a, b) => (b.name.startsWith('★') - a.name.startsWith('★')) || a.name.localeCompare(b.name));
+  elevenVoicesAt = Date.now();
+  return elevenVoices;
+}
+
+async function ttsVoiceList(force) {
+  return (await loadElevenVoices(force)).concat(GOOGLE_VOICES);
+}
+
+async function fetchElevenTts(text, voiceId) {
+  const res = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + encodeURIComponent(voiceId) +
+    '?output_format=mp3_44100_128', {
+    method: 'POST',
+    headers: { 'xi-api-key': ELEVEN_KEY, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
+    body: JSON.stringify({ text, model_id: ELEVEN_MODEL })
+  });
+  if (!res.ok) {
+    // ElevenLabs объясняет ошибку в JSON (кончились символы, голос недоступен и т.д.)
+    let msg = 'ElevenLabs ответил ' + res.status;
+    try {
+      const err = await res.json();
+      const d = err.detail;
+      if (d) msg += ': ' + (typeof d === 'string' ? d : d.message || d.status || JSON.stringify(d));
+    } catch (e) {}
+    throw new Error(msg);
+  }
+  return Buffer.from(await res.arrayBuffer());
+}
+
+// Режем текст на куски до TTS_CHUNK символов, стараясь резать по концу
+// предложения, потом по пробелу, и только в крайнем случае посреди слова
+function splitTtsText(text) {
+  const chunks = [];
+  let rest = text;
+  while (rest.length > TTS_CHUNK) {
+    const part = rest.slice(0, TTS_CHUNK);
+    let cut = Math.max(part.lastIndexOf('. '), part.lastIndexOf('! '), part.lastIndexOf('? '));
+    if (cut < TTS_CHUNK / 3) cut = part.lastIndexOf(' ');
+    if (cut < TTS_CHUNK / 3) cut = TTS_CHUNK - 1;
+    chunks.push(rest.slice(0, cut + 1).trim());
+    rest = rest.slice(cut + 1).trim();
+  }
+  if (rest) chunks.push(rest);
+  return chunks;
+}
+
+function fetchTtsChunk(text, lang) {
+  const url = 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=' +
+    encodeURIComponent(lang) + '&q=' + encodeURIComponent(text);
+  return new Promise((resolve, reject) => {
+    const req = https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } }, (res) => {
+      if (res.statusCode !== 200) {
+        res.resume();
+        return reject(new Error('Google TTS ответил ' + res.statusCode));
+      }
+      const parts = [];
+      res.on('data', (c) => parts.push(c));
+      res.on('end', () => resolve(Buffer.concat(parts)));
+    });
+    req.on('error', reject);
+    req.setTimeout(10000, () => req.destroy(new Error('Google TTS не ответил вовремя')));
+  });
+}
+
+// mp3 — это просто поток кадров, поэтому куски Google можно склеить подряд
+async function synthesizeTts(text, voice) {
+  const sep = voice.indexOf(':');
+  const engine = voice.slice(0, sep);
+  const param = voice.slice(sep + 1);
+  if (engine === 'eleven') {
+    if (!ELEVEN_KEY) throw new Error('ElevenLabs не подключён (нет ELEVENLABS_API_KEY)');
+    return fetchElevenTts(text, param);
+  }
+  const lang = GOOGLE_VOICES.some((v) => v.id === voice) ? param : 'ru';
+  const bufs = [];
+  for (const chunk of splitTtsText(text)) bufs.push(await fetchTtsChunk(chunk, lang));
+  return Buffer.concat(bufs);
+}
+
+app.get('/tts/:id.mp3', (req, res) => {
+  const clip = ttsClips.get(req.params.id);
+  if (!clip) return res.status(404).send('Not found');
+  res.set('Content-Type', 'audio/mpeg');
+  res.set('Cache-Control', 'no-store');
+  res.send(clip.buf);
+});
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, clip] of ttsClips) if (clip.expires < now) ttsClips.delete(id);
+}, 60 * 1000);
+
 // Защита от полного падения сервера: если где-то вылетит необработанная
 // ошибка, просто логируем её и продолжаем работать, вместо того чтобы
 // ронять весь процесс целиком
@@ -520,6 +685,46 @@ io.on('connection', (socket) => {
   socket.on('browser-control', (data) => {
     if (!authed) return;
     socket.broadcast.emit('browser-control', data);
+  });
+
+  // --- ТТС ---
+  // Отправителю отвечаем 'tts-result' (ок/ошибка), а сам клип рассылаем
+  // всем остальным — оверлей его проиграет, другие панели покажут в истории
+  socket.on('tts', async (data) => {
+    if (!authed || !data) return;
+    const text = String(data.text || '').replace(/\s+/g, ' ').trim().slice(0, TTS_MAX_TEXT);
+    if (!text) return;
+    const voice = typeof data.voice === 'string' && data.voice.includes(':') ? data.voice : 'google:ru';
+    const volume = Math.max(0, Math.min(100, Number(data.volume) || 0));
+    const rate = Math.max(0.5, Math.min(2, Number(data.rate) || 1));
+    try {
+      const buf = await synthesizeTts(text, voice);
+      const id = crypto.randomBytes(8).toString('hex');
+      ttsClips.set(id, { buf, expires: Date.now() + TTS_TTL });
+      const clip = {
+        id, text, volume, rate,
+        url: '/tts/' + id + '.mp3',
+        by: onlineUsers[socket.id] ? onlineUsers[socket.id].nickname : ''
+      };
+      socket.broadcast.emit('tts', clip);
+      socket.emit('tts-result', { ok: true, clip });
+    } catch (e) {
+      console.error('Ошибка ТТС:', e.message);
+      socket.emit('tts-result', { ok: false, error: e.message });
+    }
+  });
+
+  // Список голосов для панели. force — перечитать голоса ElevenLabs прямо
+  // сейчас (кнопка «обновить», например после добавления своего голоса)
+  socket.on('tts-voices', async (force) => {
+    if (!authed) return;
+    socket.emit('tts-voices', await ttsVoiceList(!!force));
+  });
+
+  // Остановить текущую озвучку и очистить очередь на оверлее
+  socket.on('tts-stop', () => {
+    if (!authed) return;
+    socket.broadcast.emit('tts-stop');
   });
 
   // --- Папки ---
