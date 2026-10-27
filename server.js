@@ -26,6 +26,16 @@ const PASSWORD = process.env.MOD_PASSWORD || '6767';
 // и не давал Render усыпить сервер
 app.get('/ping', (req, res) => res.type('text').send('ok'));
 
+// Точное время сервера — по нему считают таймеры и панель, и оверлей.
+// Иначе таймер на стриме расходится с панелью на разницу между часами
+// компьютера модератора и стримера. CORS открыт, потому что страница
+// таймера внутри iframe — это data:-ссылка без своего домена
+app.get('/time', (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Cache-Control', 'no-store');
+  res.json({ now: Date.now() });
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // --- Загруженные файлы ---

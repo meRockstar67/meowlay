@@ -427,6 +427,12 @@
   #twitch-embed { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; overflow: hidden; border-radius: 10px; }
   #twitch-embed iframe { width: 100%; height: 100%; border: 0; pointer-events: none; }
   #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; z-index: 1; }
+  /* Кружок размером с кисть/ластик вместо курсора */
+  #canvas-viewport.brush-mode:not(.pan-ready):not(.panning) #canvas { cursor: none; }
+  #brush-cursor {
+    position: absolute; left: 0; top: 0; display: none; pointer-events: none; z-index: 6;
+    border-radius: 50%; border-style: solid; box-sizing: border-box; transform: translate(-50%, -50%);
+  }
 
   #media-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
   .media-item {
@@ -1360,6 +1366,58 @@ window.addEventListener('touchend', () => {
   if (wasShape) finalizeShapeIfNeeded();
 });
 canvasWrap.addEventListener('touchmove', moveAction);
+
+// --- Кружок-курсор кисти и ластика ---
+// Живёт внутри canvas-wrap, поэтому масштаб сцены (zoom) применяется к нему
+// сам: диаметр в пикселях сцены = толщина линии, как она реально ляжет
+const brushCursor = document.createElement('div');
+brushCursor.id = 'brush-cursor';
+canvasWrap.appendChild(brushCursor);
+let brushCursorPos = null;
+
+function updateBrushCursor() {
+  const brushTool = tool === 'pen' || tool === 'eraser';
+  canvasViewport.classList.toggle('brush-mode', brushTool);
+  const panMode = canvasViewport.classList.contains('pan-ready') || canvasViewport.classList.contains('panning');
+  if (!brushTool || !brushCursorPos || panMode) {
+    brushCursor.style.display = 'none';
+    return;
+  }
+  const size = parseInt(sizeInput.value, 10) || 1;
+  const z = typeof zoomLevel === 'number' && zoomLevel > 0 ? zoomLevel : 1;
+  // Обводка всегда ~1.5 экранных пикселя, а сам кружок не меньше 6 пикселей на экране
+  const line = 1.5 / z;
+  const d = Math.max(size, 6 / z);
+  brushCursor.style.width = d + 'px';
+  brushCursor.style.height = d + 'px';
+  brushCursor.style.borderWidth = line + 'px';
+  brushCursor.style.left = (brushCursorPos.x * canvas.offsetWidth) + 'px';
+  brushCursor.style.top = (brushCursorPos.y * canvas.offsetHeight) + 'px';
+  if (tool === 'eraser') {
+    brushCursor.style.borderColor = '#ffffff';
+    brushCursor.style.background = 'rgba(255, 255, 255, 0.12)';
+  } else {
+    brushCursor.style.borderColor = colorInput.value;
+    brushCursor.style.background = 'transparent';
+  }
+  // Тёмный контур снаружи — чтобы кружок был виден и на светлом, и на тёмном
+  brushCursor.style.boxShadow = '0 0 0 ' + line + 'px rgba(0, 0, 0, 0.55)';
+  brushCursor.style.display = 'block';
+}
+
+canvasViewport.addEventListener('mousemove', (e) => {
+  // Над медиа-объектами работает перетаскивание, а не кисть — там кружок прячем
+  brushCursorPos = (e.target === canvas || drawing) ? getPos(e) : null;
+  updateBrushCursor();
+});
+canvasViewport.addEventListener('mouseleave', () => { brushCursorPos = null; updateBrushCursor(); });
+sizeInput.addEventListener('input', updateBrushCursor);
+colorInput.addEventListener('input', updateBrushCursor);
+document.querySelectorAll('.tool-btn').forEach((btn) => btn.addEventListener('click', updateBrushCursor));
+document.addEventListener('keydown', (e) => { if (e.code === 'Space') updateBrushCursor(); });
+document.addEventListener('keyup', (e) => { if (e.code === 'Space') updateBrushCursor(); });
+canvasViewport.addEventListener('wheel', () => requestAnimationFrame(updateBrushCursor), { passive: true });
+updateBrushCursor();
 
 function clamp(v, min, max) { return Math.min(Math.max(v, min), max); }
 
@@ -3386,6 +3444,22 @@ function renderFoldersList() {
   };
 
   // --- Таймер: это браузер-источник с маленькой страницей-счётчиком внутри ---
+  // Время окончания (endAt) храним по часам СЕРВЕРА: часы у модератора и у
+  // стримера могут расходиться на десятки секунд, и раньше таймер на стриме
+  // из-за этого сразу показывал, например, 4:45 вместо 5:00. Поэтому и панель,
+  // и страница таймера узнают своё отставание от сервера через /time.
+  let serverOffset = 0;
+  function syncServerTime() {
+    const t0 = Date.now();
+    fetch('/time', { cache: 'no-store' }).then((r) => r.json()).then((d) => {
+      const t1 = Date.now();
+      serverOffset = d.now - (t0 + t1) / 2;
+    }).catch(() => {});
+  }
+  syncServerTime();
+  setInterval(syncServerTime, 60000);
+  function serverNow() { return Date.now() + serverOffset; }
+
   function buildTimerUrl(t) {
     const showHours = t.total >= 3600;
     const html = '<!doctype html><html><head><meta charset="utf-8"><style>' +
@@ -3394,10 +3468,14 @@ function renderFoldersList() {
       '#t{font-family:"Segoe UI",Arial,sans-serif;font-weight:700;font-variant-numeric:tabular-nums;' +
       'white-space:nowrap;line-height:1;color:' + t.color + ';text-shadow:0 2px 6px rgba(0,0,0,.45)}' +
       '</style></head><body><div id="w"><span id="t"></span></div><script>' +
-      'var R=' + (t.running ? 1 : 0) + ',E=' + (t.endAt || 0) + ',L=' + t.left + ',H=' + (showHours ? 1 : 0) + ';' +
+      'var R=' + (t.running ? 1 : 0) + ',E=' + (t.endAt || 0) + ',L=' + t.left + ',H=' + (showHours ? 1 : 0) + ',O=0;' +
+      'var S=' + JSON.stringify(location.origin) + ';' +
+      'function sync(){var a=Date.now();fetch(S+"/time",{cache:"no-store"}).then(function(r){return r.json()})' +
+      '.then(function(d){O=d.now-(a+Date.now())/2;f()}).catch(function(){})}' +
+      'if(R){sync();setInterval(sync,60000)}' +
       'var el=document.getElementById("t");' +
       'function p(n){return (n<10?"0":"")+n}' +
-      'function f(){var s=R?Math.max(0,Math.ceil((E-Date.now())/1000)):L;' +
+      'function f(){var s=R?Math.max(0,Math.ceil((E-Date.now()-O)/1000)):L;' +
       'var h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;' +
       'el.textContent=(H?h+":"+p(m):p(m))+":"+p(x);}' +
       'function fit(){el.style.fontSize="100px";var k=Math.min(innerWidth*0.94/el.offsetWidth,innerHeight*0.9/el.offsetHeight);el.style.fontSize=(100*k)+"px";}' +
@@ -3406,7 +3484,7 @@ function renderFoldersList() {
     return 'data:text/html;base64,' + btoa(unescape(encodeURIComponent(html)));
   }
   function timerRemaining(t) {
-    return t.running ? Math.max(0, Math.ceil((t.endAt - Date.now()) / 1000)) : t.left;
+    return t.running ? Math.max(0, Math.ceil((t.endAt - serverNow()) / 1000)) : t.left;
   }
   function applyTimer(item) {
     item.url = buildTimerUrl(item.timer);
@@ -3485,7 +3563,7 @@ function renderFoldersList() {
     runBtn.onclick = () => {
       checkpoint();
       if (t.running) { t.left = timerRemaining(t); t.running = false; t.endAt = 0; }
-      else { if (!t.left) t.left = t.total; t.endAt = Date.now() + t.left * 1000; t.running = true; }
+      else { if (!t.left) t.left = t.total; t.endAt = serverNow() + t.left * 1000; t.running = true; }
       applyTimer(item);
     };
     const resetBtn = document.createElement('button');
