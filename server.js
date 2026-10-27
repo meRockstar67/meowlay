@@ -762,6 +762,22 @@ io.on('connection', (socket) => {
     saveStateDebounced();
   });
 
+  // Объединение в группу: { ids: [...], groupId: 'g...' }, groupId: null —
+  // разъединить. Группа просто помечает объекты общим groupId: панель по нему
+  // выделяет и двигает их вместе, оверлею это знать не нужно
+  socket.on('set-group', (data) => {
+    if (!authed || !data || !Array.isArray(data.ids)) return;
+    const groupId = typeof data.groupId === 'string' ? data.groupId.slice(0, 40) : null;
+    data.ids.forEach((id) => {
+      const item = mediaItems[id];
+      if (!item) return;
+      if (groupId) item.groupId = groupId;
+      else delete item.groupId;
+    });
+    io.emit('set-group', { ids: data.ids, groupId });
+    saveStateDebounced();
+  });
+
   socket.on('assign-folder', (data) => {
     if (!authed) return;
     removeItemFromAllFolders(data.itemId);

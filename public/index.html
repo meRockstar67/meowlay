@@ -199,6 +199,10 @@
   .element-row:hover { background: var(--ink-2); }
   .element-row.selected { background: var(--accent-soft); border-color: rgba(255, 122, 162, 0.45); }
   .element-row.is-hidden .element-name, .element-row.is-hidden .element-thumb { opacity: 0.45; }
+  .element-row .group-badge { flex-shrink: 0; font-size: 11px; opacity: 0.8; }
+  .group-bar { display: flex; flex-direction: column; gap: 8px; padding: 10px; margin-bottom: 12px; border-radius: var(--r-md); background: var(--ink-1); border: 1px solid var(--line); }
+  .group-bar .group-bar-title { font-size: 12.5px; color: var(--text); font-weight: 600; }
+  .group-bar.editing { border-color: rgba(255, 200, 97, 0.55); }
   .element-row .drag-handle { display: none; }
   .element-thumb {
     width: 30px; height: 30px; border-radius: var(--r-sm); background: var(--ink-3); flex-shrink: 0;
@@ -509,6 +513,7 @@
           <div class="inspector-head">
             <span class="group-title" id="inspector-title">Настройки</span>
           </div>
+          <div class="group-bar" id="group-bar" style="display:none;"></div>
           <div class="inspector-empty" id="inspector-empty">Выбери элемент в списке или на сцене — здесь появятся его настройки и управление видео.</div>
           <ul id="media-list"></ul>
         </div>
@@ -3645,6 +3650,164 @@ function renderFoldersList() {
     [cIn, fillIn, fit].forEach((c) => c.addEventListener('mousedown', (e) => e.stopPropagation()));
     return wrap;
   };
+})();
+
+// --- Группы: несколько объектов как 1 объект ---
+// У объектов группы общий groupId. Клик по любому из них выделяет всю группу,
+// поэтому она таскается целиком, а в инспекторе видны карточки всех частей —
+// можно менять текст, запускать таймер и т.д. Кнопка «Подвинуть по
+// отдельности» временно (только у тебя) отключает групповое выделение, чтобы
+// поправить расположение частей, «Снова 1 объект» включает обратно.
+(function () {
+  const barEl = document.getElementById('group-bar');
+  const editingGroups = new Set(); // группы, которые сейчас двигаем по частям
+
+  function groupMembers(gid) {
+    return Object.values(mediaItemsLocal).filter((it) => it.groupId === gid).map((it) => it.id);
+  }
+  // Группа "работает", только если в ней хотя бы 2 объекта и её не разобрали на правку
+  function activeGroupOf(id) {
+    const it = mediaItemsLocal[id];
+    if (!it || !it.groupId || editingGroups.has(it.groupId)) return null;
+    return groupMembers(it.groupId).length > 1 ? it.groupId : null;
+  }
+
+  const prevSelectOnly = window.selectOnly;
+  window.selectOnly = function (id) {
+    const gid = activeGroupOf(id);
+    if (gid) return window.selectMany(groupMembers(gid));
+    return prevSelectOnly.apply(this, arguments);
+  };
+  const prevToggleSelect = window.toggleSelect;
+  window.toggleSelect = function (id) {
+    const gid = activeGroupOf(id);
+    if (!gid) return prevToggleSelect.apply(this, arguments);
+    const members = groupMembers(gid);
+    const select = !selectedIds.has(id);
+    members.forEach((m) => { if (selectedIds.has(m) !== select) prevToggleSelect(m); });
+  };
+
+  function applyGroup(data) {
+    data.ids.forEach((id) => {
+      const it = mediaItemsLocal[id];
+      if (!it) return;
+      if (data.groupId) it.groupId = data.groupId;
+      else delete it.groupId;
+    });
+    renderElementsList();
+  }
+  socket.on('set-group', applyGroup);
+
+  function setGroup(ids, groupId) {
+    checkpoint();
+    const data = { ids, groupId };
+    applyGroup(data);
+    socket.emit('set-group', data);
+  }
+
+  function groupSelected() {
+    const ids = Array.from(selectedIds);
+    if (ids.length < 2) return;
+    setGroup(ids, 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6));
+  }
+  function ungroup(gid) {
+    editingGroups.delete(gid);
+    setGroup(groupMembers(gid), null);
+  }
+  function startEditing(gid) {
+    editingGroups.add(gid);
+    clearSelection();
+  }
+  function finishEditing(gid) {
+    editingGroups.delete(gid);
+    window.selectMany(groupMembers(gid));
+  }
+
+  function button(text, cls, title, onClick) {
+    const b = document.createElement('button');
+    b.textContent = text;
+    if (cls) b.className = cls;
+    if (title) b.title = title;
+    b.onclick = onClick;
+    return b;
+  }
+
+  function renderBar() {
+    barEl.innerHTML = '';
+    barEl.classList.remove('editing');
+    // Разобранные на правку группы — показываем всегда, чтобы не забыть собрать
+    Array.from(editingGroups).forEach((gid) => { if (groupMembers(gid).length < 2) editingGroups.delete(gid); });
+    const gidEditing = editingGroups.values().next().value;
+    if (gidEditing) {
+      barEl.classList.add('editing');
+      const t = document.createElement('div');
+      t.className = 'group-bar-title';
+      t.textContent = '✎ Двигаешь части группы по отдельности (' + groupMembers(gidEditing).length + ')';
+      barEl.appendChild(t);
+      barEl.appendChild(button('✓ Снова 1 объект', 'full', 'Собрать группу обратно', () => finishEditing(gidEditing)));
+      barEl.style.display = '';
+      return;
+    }
+
+    const ids = Array.from(selectedIds);
+    const gid = ids.length > 1 && activeGroupOf(ids[0]);
+    const isWholeGroup = gid && ids.every((id) => mediaItemsLocal[id] && mediaItemsLocal[id].groupId === gid) &&
+      groupMembers(gid).length === ids.length;
+
+    if (isWholeGroup) {
+      const t = document.createElement('div');
+      t.className = 'group-bar-title';
+      t.textContent = '🔗 Группа из ' + ids.length + ' объектов';
+      barEl.appendChild(t);
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.appendChild(button('✎ Подвинуть по отдельности', 'secondary grow', 'Временно двигать части группы по одной', () => startEditing(gid)));
+      row.appendChild(button('Разъединить', 'secondary', 'Ctrl+Shift+G', () => ungroup(gid)));
+      barEl.appendChild(row);
+    } else if (ids.length > 1) {
+      barEl.appendChild(button('🔗 Объединить в 1 объект', 'full', 'Ctrl+G', groupSelected));
+    } else {
+      barEl.style.display = 'none';
+      return;
+    }
+    barEl.style.display = '';
+  }
+
+  // Значок группы в списке слоёв
+  function decorateRows() {
+    document.querySelectorAll('#elements-list .element-row').forEach((li) => {
+      const it = mediaItemsLocal[li.dataset.id];
+      if (!it || !it.groupId || groupMembers(it.groupId).length < 2) return;
+      const badge = document.createElement('span');
+      badge.className = 'group-badge';
+      badge.textContent = editingGroups.has(it.groupId) ? '✎' : '🔗';
+      badge.title = editingGroups.has(it.groupId) ? 'Группа (двигается по частям)' : 'В группе';
+      const name = li.querySelector('.element-name');
+      if (name) name.after(badge);
+    });
+  }
+
+  const prevRender = renderElementsList;
+  renderElementsList = function () {
+    prevRender();
+    decorateRows();
+    renderBar();
+  };
+
+  document.addEventListener('keydown', (e) => {
+    if (!(e.ctrlKey || e.metaKey) || e.code !== 'KeyG') return;
+    const tag = document.activeElement && document.activeElement.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    e.preventDefault();
+    if (e.shiftKey) {
+      const gid = Array.from(selectedIds).map((id) => mediaItemsLocal[id] && mediaItemsLocal[id].groupId).find(Boolean);
+      if (gid) ungroup(gid);
+    } else {
+      groupSelected();
+    }
+  });
+
+  renderElementsList();
 })();
 
 // --- ТТС: модератор пишет текст, сервер делает mp3, оверлей его проигрывает ---
