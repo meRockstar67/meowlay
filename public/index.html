@@ -601,6 +601,7 @@
         </div>
 
         <div class="divider"></div>
+        <button id="reload-media-btn" class="secondary full" title="Если картинка в оверлее не загрузилась — загрузить заново">🔄 Перезагрузить картинки в оверлее</button>
         <button id="clear-media-btn" class="danger full">Убрать всё медиа со сцены</button>
       </div>
     </section>
@@ -2230,6 +2231,12 @@ document.getElementById('media-file').addEventListener('change', (e) => {
   e.target.value = '';
 });
 
+document.getElementById('reload-media-btn').addEventListener('click', () => {
+  socket.emit('media-reload');
+  const b = document.getElementById('reload-media-btn');
+  const t = b.textContent; b.textContent = '✓ Отправлено';
+  setTimeout(() => { b.textContent = t; }, 1500);
+});
 document.getElementById('clear-media-btn').addEventListener('click', () => {
   checkpoint();
   socket.emit('clear-media');

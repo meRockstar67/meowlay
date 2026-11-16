@@ -280,10 +280,12 @@ function createOrUpdateMedia(item) {
 
     if (item.type === 'image') {
       inner.innerHTML = '<img src="' + item.url + '">';
+      attachRetry(inner.querySelector('img'), item.url);
     } else if (item.type === 'video') {
       inner.innerHTML = '<video id="vid-' + item.id + '" autoplay muted playsinline' +
         (item.loop ? ' loop' : '') + ' style="width:100%;height:100%;object-fit:cover;">' +
         '<source src="' + item.url + '"></video>';
+      attachRetry(inner.querySelector('video'), item.url);
     } else if (item.type === 'text') {
       const textDiv = document.createElement('div');
       textDiv.className = 'text-content';
@@ -440,6 +442,37 @@ socket.on('youtube-control', (data) => {
   else if (data.action === 'mute') func = 'mute';
   else if (data.action === 'unmute') func = 'unMute';
   if (func) iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func, args }), '*');
+});
+
+
+// --- Повторная загрузка картинок/видео, если не загрузились ---
+// Авто: до 6 попыток с нарастающей паузой. Вручную: кнопка в панели модератора.
+const retryEls = new Set();
+function attachRetry(el, url) {
+  if (!el || !url || url.startsWith('data:')) return;
+  let tries = 0, timer = null;
+  el._retry = () => {
+    clearTimeout(timer);
+    if (!el.isConnected) { retryEls.delete(el); return; }
+    const u = url + (url.includes('?') ? '&' : '?') + 'r=' + Date.now();
+    if (el.tagName === 'VIDEO') { el.src = u; el.load(); el.play().catch(() => {}); }
+    else el.src = u;
+  };
+  const fail = () => {
+    retryEls.add(el);
+    if (tries >= 6) return;
+    tries++;
+    timer = setTimeout(el._retry, 1500 * tries);
+  };
+  el.addEventListener('error', fail);
+  el.addEventListener(el.tagName === 'VIDEO' ? 'loadeddata' : 'load', () => {
+    tries = 0; retryEls.delete(el);
+  });
+  const src = el.querySelector && el.querySelector('source');
+  if (src) src.addEventListener('error', fail);
+}
+socket.on('media-reload', () => {
+  retryEls.forEach((el) => el._retry && el._retry());
 });
 
 // --- Управление браузер-источником (обновить страницу, как F5 в OBS) ---
