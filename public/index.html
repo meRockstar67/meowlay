@@ -580,6 +580,9 @@
   #tb-select.active { background: var(--accent); color: #0b1020; }
   body.sidebar-collapsed #tb-select.active { background: var(--accent); color: #0b1020; }
   #canvas-viewport.select-tool #canvas { cursor: default; }
+
+  .marquee { position: fixed; z-index: 60; pointer-events: none; border: 1px solid #4aa8ff; background: rgba(74, 168, 255, 0.22); }
+  .marquee[hidden] { display: none; }
   @media (max-width: 760px) {
     :root { --panel-w: auto; }
     .topbar { top: 10px; }
@@ -4611,6 +4614,64 @@ function renderFoldersList() {
     pushItem(newItem({ type: 'text', text, color: document.getElementById('tp-color').value, fontScale: parseFloat(document.getElementById('tp-size').value) || 0.6, w: 0.3, h: 0.12 }));
     document.getElementById('tp-text').value = ''; closePops();
   });
+})();
+
+// --- Рамка выделения как в Windows: Shift + ЛКМ, тянуть по пустому месту сцены ---
+(function () {
+  const vp = document.getElementById('canvas-viewport');
+  const box = document.createElement('div');
+  box.className = 'marquee'; box.hidden = true;
+  document.body.appendChild(box);
+  let start = null, moved = false, keep = false, base = null;
+
+  window.addEventListener('mousedown', (e) => {
+    if (e.button !== 0 || !e.shiftKey) return;
+    if (!vp.contains(e.target)) return;
+    // по самим элементам Shift+клик работает как раньше (добавить/убрать из выделения)
+    if (e.target.closest('.media-item, .group-frame, .item-controls, .resize-handle, .rotate-handle')) return;
+    e.preventDefault(); e.stopPropagation(); // не панорамировать и не рисовать
+    start = { x: e.clientX, y: e.clientY }; moved = false;
+    keep = e.ctrlKey || e.metaKey;
+    base = new Set(selectedIds);
+  }, true);
+
+  function rectOf(e) {
+    const x1 = Math.min(start.x, e.clientX), y1 = Math.min(start.y, e.clientY);
+    const x2 = Math.max(start.x, e.clientX), y2 = Math.max(start.y, e.clientY);
+    return { x1, y1, x2, y2 };
+  }
+  function hit(r) {
+    const ids = new Set(keep ? base : []);
+    Object.keys(mediaItemsLocal).forEach((id) => {
+      const el = document.getElementById('cm-' + id);
+      if (!el) return;
+      const b = el.getBoundingClientRect();
+      if (b.right >= r.x1 && b.left <= r.x2 && b.bottom >= r.y1 && b.top <= r.y2) ids.add(id);
+    });
+    // если задета часть группы — выделяем всю группу
+    const groups = new Set();
+    ids.forEach((id) => { const g = mediaItemsLocal[id] && mediaItemsLocal[id].groupId; if (g) groups.add(g); });
+    if (groups.size) Object.keys(mediaItemsLocal).forEach((id) => { if (groups.has(mediaItemsLocal[id].groupId)) ids.add(id); });
+    return ids;
+  }
+  window.addEventListener('mousemove', (e) => {
+    if (!start) return;
+    if (!moved && Math.hypot(e.clientX - start.x, e.clientY - start.y) < 4) return;
+    moved = true;
+    const r = rectOf(e);
+    box.hidden = false;
+    box.style.left = r.x1 + 'px'; box.style.top = r.y1 + 'px';
+    box.style.width = (r.x2 - r.x1) + 'px'; box.style.height = (r.y2 - r.y1) + 'px';
+    selectMany(Array.from(hit(r)));
+  });
+  window.addEventListener('mouseup', (e) => {
+    if (!start) return;
+    if (moved) selectMany(Array.from(hit(rectOf(e))));
+    else if (!keep) clearSelection(); // Shift+клик по пустому месту снимает выделение
+    start = null; box.hidden = true;
+    renderElementsList();
+  });
+  window.addEventListener('blur', () => { start = null; box.hidden = true; });
 })();
 </script>
 </body>
