@@ -6,38 +6,38 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --ink-0: #191a25;
-    --ink-1: #202232;
-    --ink-2: #2a2c3f;
-    --ink-3: #35384f;
-    --line: #2e3146;
-    --stage: #14151e;
-    --text: #ecebf5;
-    --muted: #9a9cb4;
-    --faint: #6c6f88;
-    --accent: #ff7aa2;
-    --accent-hover: #ff93b4;
-    --accent-ink: #2b0d19;
-    --accent-soft: rgba(255, 122, 162, 0.14);
+    --ink-0: #10121a;
+    --ink-1: #1e212b;
+    --ink-2: #272a37;
+    --ink-3: #343848;
+    --line: #2a2e3b;
+    --stage: #10121a;
+    --text: #e6e8f2;
+    --muted: #9a9eb0;
+    --faint: #686c80;
+    --accent: #82a5ff;
+    --accent-hover: #9db8ff;
+    --accent-ink: #0b1020;
+    --accent-soft: rgba(130, 165, 255, 0.14);
     --live: #5fe0b7;
     --warn: #ffc861;
     --danger: #ff6b6b;
     --danger-soft: rgba(255, 107, 107, 0.12);
     --panel-w: 320px;
     --rail-w: 68px;
-    --r-lg: 12px;
+    --r-lg: 10px;
     --r-md: 8px;
     --r-sm: 6px;
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
   body {
-    font-family: 'Onest', 'Segoe UI', system-ui, sans-serif;
+    font-family: 'JetBrains Mono', 'Onest', ui-monospace, Consolas, monospace;
     background: var(--ink-0); color: var(--text);
-    margin: 0; overflow: hidden; font-size: 13px; line-height: 1.4;
+    margin: 0; overflow: hidden; font-size: 12px; line-height: 1.4;
     font-feature-settings: 'tnum' 1;
   }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -197,7 +197,7 @@
   }
   .element-row + .element-row { margin-top: 2px; }
   .element-row:hover { background: var(--ink-2); }
-  .element-row.selected { background: var(--accent-soft); border-color: rgba(255, 122, 162, 0.45); }
+  .element-row.selected { background: var(--accent-soft); border-color: rgba(130, 165, 255, 0.45); }
   .element-row.is-hidden .element-name, .element-row.is-hidden .element-thumb { opacity: 0.45; }
   .element-row .group-badge { flex-shrink: 0; font-size: 11px; opacity: 0.8; }
   .group-bar { display: flex; flex-direction: column; gap: 8px; padding: 10px; margin-bottom: 12px; border-radius: var(--r-md); background: var(--ink-1); border: 1px solid var(--line); }
@@ -283,7 +283,7 @@
 
   #shape-preview {
     position: absolute; z-index: 3; pointer-events: none;
-    border: 2px dashed var(--accent); background: rgba(255, 122, 162, 0.08);
+    border: 2px dashed var(--accent); background: rgba(130, 165, 255, 0.08);
   }
 
   /* Таймер */
@@ -344,7 +344,7 @@
   .tools-grid button svg { width: 18px; height: 18px; }
   button.tool-btn { background: var(--ink-2); color: var(--muted); }
   button.tool-btn:hover { background: var(--ink-3); color: var(--text); }
-  button.tool-btn.active { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 1px rgba(255, 122, 162, 0.5); }
+  button.tool-btn.active { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 1px rgba(130, 165, 255, 0.5); }
   .swatches { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
   .swatch { width: 24px; height: 24px; padding: 0; border-radius: 50%; border: 2px solid var(--ink-1); box-shadow: 0 0 0 1px var(--ink-3); }
   .swatch:hover { box-shadow: 0 0 0 2px var(--text); }
@@ -438,7 +438,7 @@
 
   #media-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
   .media-item {
-    position: absolute; outline: 2px dashed rgba(255, 122, 162, 0.7); outline-offset: -2px; pointer-events: auto; cursor: move;
+    position: absolute; outline: 2px dashed rgba(130, 165, 255, 0.7); outline-offset: -2px; pointer-events: auto; cursor: move;
     user-select: none; -webkit-user-select: none; -moz-user-select: none;
   }
   .media-item * { user-select: none; -webkit-user-select: none; -moz-user-select: none; -webkit-user-drag: none; }
@@ -465,7 +465,7 @@
   .media-item.in-group, .media-item.in-group.selected { outline: none; box-shadow: none; }
   .media-item.in-group > .item-controls, .media-item.in-group > .resize-handle, .media-item.in-group > .rotate-handle { display: none; }
   .group-frame {
-    position: absolute; outline: 2px dashed rgba(255, 122, 162, 0.7); outline-offset: 2px;
+    position: absolute; outline: 2px dashed rgba(130, 165, 255, 0.7); outline-offset: 2px;
     pointer-events: auto; cursor: move;
   }
   .group-frame.selected { outline: 3px solid var(--warn); box-shadow: 0 0 0 5px rgba(255, 200, 97, 0.25); }
@@ -487,45 +487,137 @@
     :root { --panel-w: min(300px, calc(100vw - var(--rail-w) - 40px)); --rail-w: 60px; }
     .resizer { display: none; }
   }
+
+  /* ===== Тема в стиле Pogly: плавающие плашки, тулбар снизу, окна ===== */
+  :root { --panel-w: 340px; --float-bg: #1e212b; --float-line: #292d3a; --float-shadow: 0 8px 28px rgba(0, 0, 0, 0.38); }
+  .app-shell { display: block; }
+  button { font-weight: 500; font-size: 12px; }
+  .workspace { position: absolute; inset: 0; padding: 0; background-color: #10121a;
+    background-image: radial-gradient(circle, rgba(120, 128, 160, 0.20) 1.3px, transparent 1.6px); background-size: 24px 24px; }
+  #canvas-viewport { position: absolute; inset: 0; width: auto; height: auto; flex: none; }
+  #canvas-wrap { border-radius: 2px; border: 1px solid #2a2d3a; box-shadow: none; background-color: #14161e;
+    background-image: linear-gradient(45deg, #171922 25%, transparent 25%), linear-gradient(-45deg, #171922 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #171922 75%), linear-gradient(-45deg, transparent 75%, #171922 75%); }
+  #canvas-wrap::before { content: ''; position: absolute; inset: -266px; border: 1.5px dashed #3a3e50; border-radius: 2px; pointer-events: none; z-index: -1; }
+  #twitch-embed { border-radius: 0; }
+  .preload-label { position: absolute; z-index: -1; pointer-events: none; font-size: 11px; letter-spacing: .06em; color: #5a5c70; white-space: nowrap; }
+  .pl-top { left: 50%; top: -214px; transform: translateX(-50%); }
+  .pl-bottom { left: 50%; bottom: -214px; transform: translateX(-50%); }
+  .pl-left { left: -214px; top: 50%; transform: translate(-50%, -50%) rotate(-90deg); }
+  .pl-right { right: -214px; top: 50%; transform: translate(50%, -50%) rotate(90deg); }
+
+  /* плашки сверху */
+  .topbar { position: absolute; top: 21px; z-index: 25; display: flex; align-items: center; gap: 10px; height: 34px;
+    background: var(--float-bg); border: 1px solid var(--float-line); border-radius: 10px; box-shadow: var(--float-shadow); font-size: 11.5px; font-weight: 700; }
+  .topbar-l { left: 30px; padding: 0 14px 0 8px; }
+  .topbar-r { right: 30px; padding: 0 6px 0 6px; gap: 4px; }
+  .tb-logo { width: 22px; height: 22px; color: var(--accent); display: flex; }
+  .tb-logo svg { width: 100%; height: 100%; }
+  .tb-sep { width: 1px; height: 18px; background: #323643; margin: 0 4px; flex-shrink: 0; }
+  .tb-scene { display: flex; align-items: center; gap: 6px; }
+  .tb-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); display: inline-block; }
+  #status { position: static; background: none; border: 0; padding: 0; border-radius: 0; font-size: 11.5px; font-weight: 700;
+    max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tb-chip { display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px 0 8px; border-radius: 999px;
+    background: #10121a; border: 1px solid #2c303d; color: var(--text); font-weight: 700; font-size: 11.5px; }
+  .tb-chip:hover { background: #171a24; }
+  .tb-chip svg { width: 14px; height: 14px; color: var(--muted); }
+  #online-count { font-weight: 700; }
+  .tb-icon { width: 28px; height: 28px; padding: 0; background: transparent; color: var(--muted); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .tb-icon svg { width: 16px; height: 16px; }
+  .tb-icon:hover { background: var(--ink-2); color: var(--text); }
+  .tb-icon.ok { color: var(--live); }
+  #online-widget { top: 62px; right: 30px; display: none !important; background: var(--float-bg); border-color: var(--float-line);
+    border-radius: 10px; box-shadow: var(--float-shadow); z-index: 26; min-width: 160px; }
+  #online-widget.open { display: block !important; }
+  #show-ui-btn, body.sidebar-collapsed #show-ui-btn { display: none; }
+
+  /* тулбар снизу по центру */
+  .rail { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 30; width: auto; flex-direction: row; align-items: center;
+    gap: 6px; padding: 6px 10px; background: var(--float-bg); border: 1px solid var(--float-line); border-radius: 12px; box-shadow: var(--float-shadow); max-width: calc(100vw - 16px); }
+  body.sidebar-collapsed .rail { display: flex; }
+  .rail .brand, .rail-spacer, #sidebar-toggle-btn { display: none; }
+  .rail-tab { width: 30px; height: 30px; padding: 0; border-radius: 8px; font-size: 0; gap: 0; justify-content: center; align-items: center; color: #9a9eb0; flex-shrink: 0; }
+  .rail-tab svg { width: 17px; height: 17px; }
+  .rail-tab:hover { background: var(--ink-2); color: var(--text); }
+  .rail-tab.active { background: var(--accent); color: #0b1020; }
+  body.sidebar-collapsed .rail-tab.active { background: transparent; color: #9a9eb0; }
+  body.sidebar-collapsed .rail-tab.active:hover { background: var(--ink-2); color: var(--text); }
+  .rail-sep { width: 1px; height: 18px; background: #323643; margin: 0 4px; flex-shrink: 0; }
+
+  /* окна */
+  .sidebar { position: fixed; left: 30px; top: 70px; bottom: 84px; width: var(--panel-w); z-index: 20; background: var(--float-bg);
+    border: 1px solid var(--float-line); border-radius: 12px; box-shadow: var(--float-shadow); overflow: hidden; }
+  .resizer { right: -2px; }
+  #panel-hide-btn { top: 12px; right: 10px; font-size: 13px; }
+  .pane-head h2 { font-size: 13px; letter-spacing: .02em; text-transform: uppercase; }
+  .zoom-bar { bottom: 28px; right: 30px; border-radius: 12px; background: var(--float-bg); border: 1px solid var(--float-line); box-shadow: var(--float-shadow); padding: 5px 6px; }
+  .zoom-bar button { border-radius: 8px; width: 28px; height: 28px; }
+  .zoom-bar #zoom-reset-btn { border-radius: 8px; }
+  .dropzone, .inspector-empty, .folder-drop { border-radius: 10px; }
+  .media-item { outline-style: dashed; }
+  #tts-text, input, select, .text-edit { border-radius: 8px; }
+
+
+  /* окна выбора элементов и текста */
+  .popwin { position: fixed; left: 50%; bottom: 86px; transform: translateX(-50%); width: 440px; max-width: calc(100vw - 16px); max-height: 60vh;
+    background: var(--float-bg); border: 1px solid var(--float-line); border-radius: 12px; box-shadow: var(--float-shadow); z-index: 40; display: flex; flex-direction: column; overflow: hidden; }
+  .popwin[hidden] { display: none; }
+  .pick-tabs { display: flex; gap: 6px; padding: 12px 14px 6px; }
+  .pick-tabs button { background: transparent; color: var(--muted); padding: 6px 10px; border-radius: 8px; font-weight: 600; }
+  .pick-tabs button:hover { background: var(--ink-2); color: var(--text); }
+  .pick-tabs button.active { background: var(--ink-3); color: var(--text); }
+  .pk-title { font-weight: 700; font-size: 13px; padding: 6px 4px; text-transform: uppercase; letter-spacing: .02em; }
+  .pick-body { padding: 8px 14px 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+  .pick-body section { display: flex; flex-direction: column; gap: 10px; }
+  .pick-body section[hidden] { display: none; }
+  .pk-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .pk-thumb { aspect-ratio: 1; padding: 6px; background: var(--ink-0); border: 1px solid var(--line); border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .pk-thumb:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .pk-thumb img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .pk-lab { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+  .rail-pick.picked { background: var(--accent); color: #0b1020; }
+  #tb-select.active { background: var(--accent); color: #0b1020; }
+  body.sidebar-collapsed #tb-select.active { background: var(--accent); color: #0b1020; }
+  #canvas-viewport.select-tool #canvas { cursor: default; }
+  @media (max-width: 760px) {
+    :root { --panel-w: auto; }
+    .topbar { top: 10px; }
+    .topbar-l { left: 8px; } .topbar-r { right: 8px; }
+    #online-widget { right: 8px; top: 50px; }
+    .sidebar { left: 8px; right: 8px; top: 54px; bottom: 76px; width: auto; }
+    .resizer { display: none; }
+    .rail { bottom: 12px; overflow-x: auto; }
+    .zoom-bar { bottom: 68px; right: 8px; }
+  }
 </style>
 </head>
 <body>
 <div class="app-shell">
   <nav class="rail" aria-label="Разделы панели">
-    <div class="brand" title="meowlay">
-      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="6" cy="9" r="2.2"/><circle cx="10.2" cy="5.6" r="2.2"/><circle cx="13.8" cy="5.6" r="2.2"/><circle cx="18" cy="9" r="2.2"/><path d="M12 10.5c-3 0-6 3.4-6 6.3 0 1.7 1.3 2.7 3 2.7 1.2 0 2-.6 3-.6s1.8.6 3 .6c1.7 0 3-1 3-2.7 0-2.9-3-6.3-6-6.3z"/></svg>
-    </div>
-    <button class="rail-tab active" data-tab="layers" title="Слои и управление медиа">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 3 8l9 5 9-5-9-5z"/><path d="m3 13 9 5 9-5"/></svg>
-      Слои
-    </button>
-    <button class="rail-tab" data-tab="add" title="Добавить медиа">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M12 8v8M8 12h8"/></svg>
-      Добавить
-    </button>
-    <button class="rail-tab" data-tab="draw" title="Рисование">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l1-4L16 5l3 3L8 19l-4 1z"/><path d="m14 7 3 3"/></svg>
-      Рисовать
-    </button>
-    <button class="rail-tab" data-tab="folders" title="Папки">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2.5h7a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></svg>
-      Папки
-    </button>
-    <button class="rail-tab" data-tab="stream" title="Twitch-стрим">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2.5"/><path d="M8 21h8M12 17v4"/><path d="m10.5 9 3.5 2-3.5 2z" fill="currentColor"/></svg>
-      Стрим
-    </button>
-    <button class="rail-tab" data-tab="tts" title="Озвучка текста (ТТС)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>
-      ТТС
-    </button>
-    <div class="rail-spacer"></div>
+    <button class="rail-tab active" id="tb-select" title="Выбор (V)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.500a.5.5 0 0 1-.063.947l-6.124 1.580a2 2 0 0 0-1.438 1.435l-1.579 6.126a.5.5 0 0 1-.947.063z"/></svg></button>
+    <button class="rail-tab" data-tab="draw" title="Рисование (B)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l1-4L16 5l3 3L8 19l-4 1z"/><path d="m14 7 3 3"/></svg></button>
+    <span class="rail-sep"></span>
+    <button class="rail-tab rail-pick" data-pick="images" title="Картинки и GIF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 5h6"/><path d="M19 2v6"/><path d="M21 11.500V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.500"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/><circle cx="9" cy="9" r="2"/></svg></button>
+    <button class="rail-tab rail-pick" data-pick="emotes" title="Эмодзи 7TV"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.500 2 4 2 4-2 4-2"/><line x1="9" x2="9.010" y1="9" y2="9"/><line x1="15" x2="15.010" y1="9" y2="9"/></svg></button>
+    <button class="rail-tab rail-pick" data-pick="widgets" title="Сайты и виджеты"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.500 4-5 16"/></svg></button>
+    <button class="rail-tab rail-pick" data-pick="media" title="Видео и YouTube"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 3v18"/><path d="M3 7.500h4"/><path d="M3 12h18"/><path d="M3 16.500h4"/><path d="M17 3v18"/><path d="M17 7.500h4"/><path d="M17 16.500h4"/></svg></button>
+    <button class="rail-tab rail-pick" data-pick="text" title="Текст (T)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v16"/><path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"/><path d="M9 20h6"/></svg></button>
+    <span class="rail-sep"></span>
+    <button class="rail-tab rail-btn" id="tb-undo" title="Отменить (Ctrl+Z)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
+    <button class="rail-tab rail-btn" id="tb-redo" title="Повторить (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
+    <button class="rail-tab active" data-tab="layers" title="Слои"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 3 8l9 5 9-5-9-5z"/><path d="m3 13 9 5 9-5"/></svg></button>
+    <span class="rail-sep"></span>
+    <button class="rail-tab" data-tab="add" title="Таймер, перезагрузка картинок, очистка сцены"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M12 8v8M8 12h8"/></svg></button>
+    <button class="rail-tab" data-tab="folders" title="Папки"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2.5h7a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></svg></button>
+    <button class="rail-tab" data-tab="stream" title="Twitch-стрим"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2.5"/><path d="M8 21h8M12 17v4"/><path d="m10.5 9 3.5 2-3.5 2z" fill="currentColor"/></svg></button>
+    <button class="rail-tab" data-tab="tts" title="Озвучка текста (ТТС)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg></button>
     <button id="sidebar-toggle-btn" title="Скрыть левую часть целиком (Ctrl+B)">◀</button>
   </nav>
 
   <aside class="sidebar">
     <div class="resizer" id="panel-resizer" title="Тяни, чтобы изменить ширину панели"></div>
-    <button id="panel-hide-btn" title="Скрыть левую часть целиком (Ctrl+B)">«</button>
+    <button id="panel-hide-btn" title="Закрыть окно (Ctrl+B)">✕</button>
 
     <!-- Слои + настройки выбранного -->
     <section class="pane layers-pane active" data-pane="layers">
@@ -721,17 +813,74 @@
     </section>
   </aside>
 
+
+  <div id="picker" class="popwin" hidden>
+    <div class="pick-tabs">
+      <button data-ptab="images">картинки</button><button data-ptab="emotes">эмодзи</button><button data-ptab="widgets">виджеты</button><button data-ptab="media">медиа</button>
+    </div>
+    <div class="pick-body">
+      <section data-psec="images">
+        <label class="dropzone" id="pk-drop"><strong>Загрузить картинку или GIF</strong><span class="note">Перетащи файл сюда или нажми. До 12 МБ</span>
+          <input type="file" id="pk-img-file" accept="image/*" multiple style="display:none;"></label>
+        <div class="row"><input type="text" id="pk-img-url" class="grow" placeholder="Ссылка на картинку или GIF"><button id="pk-img-add">Добавить</button></div>
+        <div class="group-title" id="pk-recent-title">Уже были на сцене</div>
+        <div class="pk-grid" id="pk-recent"></div>
+      </section>
+      <section data-psec="emotes" hidden>
+        <div class="row"><input type="text" id="pk-emote-q" class="grow" placeholder="Поиск эмодзи 7TV"><button id="pk-emote-go">Найти</button></div>
+        <div class="pk-grid" id="pk-emotes"></div>
+        <div class="note" id="pk-emote-note"></div>
+      </section>
+      <section data-psec="widgets" hidden>
+        <div class="segmented" id="pk-wtype"><button data-t="browser" class="active">Сайт</button><button data-t="ninja">OBS Ninja</button></div>
+        <input type="text" id="pk-w-url" class="full" placeholder="Ссылка на сайт (чат, донаты, виджет)">
+        <label class="switch"><input type="checkbox" id="pk-w-proxy"><span class="track"></span>Открывать через прокси</label>
+        <button id="pk-w-add" class="full">Добавить</button>
+      </section>
+      <section data-psec="media" hidden>
+        <label class="dropzone"><strong>Загрузить видео</strong><span class="note">До 20 МБ (mp4, webm)</span>
+          <input type="file" id="pk-vid-file" accept="video/*" multiple style="display:none;"></label>
+        <div class="row"><input type="text" id="pk-yt-url" class="grow" placeholder="Ссылка на YouTube"><button id="pk-yt-add">Добавить</button></div>
+        <button id="pk-timer" class="secondary full">⏱ Таймер обратного отсчёта…</button>
+      </section>
+    </div>
+  </div>
+  <div id="textpop" class="popwin textpop" hidden>
+    <div class="pick-tabs"><span class="pk-title">Создать текст</span></div>
+    <div class="pick-body">
+      <textarea id="tp-text" class="text-edit" rows="3" placeholder="Что написать на сцене"></textarea>
+      <div class="row"><label class="pk-lab">Цвет <input type="color" id="tp-color" value="#ffffff"></label>
+        <label class="pk-lab grow">Размер <input type="range" id="tp-size" min="0.2" max="2" step="0.05" value="0.6"></label></div>
+      <button id="tp-add" class="full">Создать текст</button>
+    </div>
+  </div>
+
   <main class="workspace">
     <button id="show-ui-btn" title="Показать панель (Ctrl+B)">☰ Панель</button>
-    <div id="status">Подключение...</div>
+    <div class="topbar topbar-l">
+      <span class="tb-logo"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="6" cy="9" r="2.2"/><circle cx="10.2" cy="5.6" r="2.2"/><circle cx="13.8" cy="5.6" r="2.2"/><circle cx="18" cy="9" r="2.2"/><path d="M12 10.5c-3 0-5.5 2.6-5.5 5 0 1.8 1.4 3 3.2 3 .9 0 1.5-.3 2.3-.3s1.4.3 2.3.3c1.8 0 3.2-1.2 3.2-3 0-2.4-2.5-5-5.5-5z"/></svg></span>
+      <div id="status">Подключение...</div>
+      <span class="tb-sep"></span>
+      <span class="tb-scene">meowlay<i class="tb-dot"></i></span>
+    </div>
+    <div class="topbar topbar-r">
+      <button class="tb-chip" id="tb-online" title="Кто онлайн"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.5-3.2 2.8-5 5.5-5s5 1.8 5.5 5"/><path d="M16 5.3a3 3 0 0 1 0 5.4M17.5 14.3c1.7.6 2.8 2.200 3 4.700"/></svg><span id="online-count">0</span></button>
+      <span class="tb-sep"></span>
+      <button class="tb-icon" id="tb-link" title="Скопировать ссылку для OBS"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.700 0l3-3a4 4 0 0 0-5.700-5.700l-1 1"/><path d="M14 10a4 4 0 0 0-5.700 0l-3 3a4 4 0 0 0 5.700 5.700l1-1"/></svg></button>
+      <button class="tb-icon" id="tb-nick" title="Сменить ник"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.400 15a1.700 1.700 0 0 0 .3 1.800l.1.1a2 2 0 1 1-2.800 2.800l-.1-.1a1.700 1.700 0 0 0-1.800-.3 1.700 1.700 0 0 0-1 1.500V21a2 2 0 1 1-4 0v-.1a1.700 1.700 0 0 0-1.100-1.500 1.700 1.700 0 0 0-1.800.3l-.1.1a2 2 0 1 1-2.800-2.800l.1-.1a1.700 1.700 0 0 0 .3-1.800 1.700 1.700 0 0 0-1.500-1H3a2 2 0 1 1 0-4h.1a1.700 1.700 0 0 0 1.500-1.100 1.700 1.700 0 0 0-.3-1.800l-.1-.1a2 2 0 1 1 2.800-2.800l.1.1a1.700 1.700 0 0 0 1.800.3H9a1.700 1.700 0 0 0 1-1.500V3a2 2 0 1 1 4 0v.1a1.700 1.700 0 0 0 1 1.500 1.700 1.700 0 0 0 1.800-.3l.1-.1a2 2 0 1 1 2.800 2.800l-.1.1a1.700 1.700 0 0 0-.3 1.800V9a1.700 1.700 0 0 0 1.500 1H21a2 2 0 1 1 0 4h-.1a1.700 1.700 0 0 0-1.500 1z"/></svg></button>
+    </div>
     <div id="online-widget" style="display:none;">
-      <div class="online-title"><span class="online-dot"></span><span id="online-count">0 онлайн</span></div>
+      <div class="online-title"><span class="online-dot"></span>В сети</div>
       <div class="online-names" id="online-names"></div>
       <button class="change-nick-btn" id="change-nick-btn">сменить ник</button>
     </div>
 
     <div id="canvas-viewport">
       <div id="canvas-wrap">
+        <div class="preload-label pl-top">зона предзагрузки элементов</div>
+        <div class="preload-label pl-bottom">зона предзагрузки элементов</div>
+        <div class="preload-label pl-left">зона предзагрузки элементов</div>
+        <div class="preload-label pl-right">зона предзагрузки элементов</div>
         <div id="twitch-embed"></div>
         <canvas id="canvas"></canvas>
         <div id="media-layer"></div>
@@ -779,6 +928,13 @@ function setSidebarCollapsed(collapsed) {
   sidebarToggleBtn.textContent = collapsed ? '▶' : '◀';
   localStorage.setItem('meowlay-sidebar-collapsed', collapsed ? '1' : '0');
 }
+try {
+  // Новый интерфейс: при первом заходе окна закрыты, видна только сцена
+  if (!localStorage.getItem('meowlay-ui-v2')) {
+    localStorage.setItem('meowlay-ui-v2', '1');
+    localStorage.setItem('meowlay-sidebar-collapsed', '1');
+  }
+} catch (e) {}
 setSidebarCollapsed(localStorage.getItem('meowlay-sidebar-collapsed') === '1');
 sidebarToggleBtn.addEventListener('click', () => {
   setSidebarCollapsed(!document.body.classList.contains('sidebar-collapsed'));
@@ -822,7 +978,7 @@ socket.on('auth-result', (result) => {
     statusEl.textContent = OFFLINE ? '🧪 Локальный режим, без сервера' : '🧪 Тестовый режим';
     if (!nickname) socket.emit('set-nickname', 'тест');
   } else if (nickname) {
-    statusEl.textContent = '✅ Подключено как ' + nickname;
+    statusEl.textContent = nickname;
     onlineWidget.style.display = '';
   } else {
     // Первый заход с этого IP — просим придумать ник, дальше он будет
@@ -832,18 +988,40 @@ socket.on('auth-result', (result) => {
 });
 
 socket.on('nickname-set', (nickname) => {
-  statusEl.textContent = '✅ Подключено как ' + nickname;
+  statusEl.textContent = nickname;
   onlineWidget.style.display = '';
 });
 
 socket.on('online-list', (names) => {
-  onlineCountEl.textContent = names.length + ' онлайн';
+  onlineCountEl.textContent = String(names.length);
   onlineNamesEl.innerHTML = names.map((n) => '<span>' + n.replace(/</g, '&lt;') + '</span>').join('');
 });
 
 document.getElementById('change-nick-btn').addEventListener('click', () => {
   askNickname('Новый ник:');
 });
+
+// --- Кнопки верхней панели и тулбара (дизайн как у Pogly) ---
+(function () {
+  const widget = document.getElementById('online-widget');
+  document.getElementById('tb-online').addEventListener('click', (e) => {
+    e.stopPropagation();
+    widget.classList.toggle('open');
+  });
+  document.addEventListener('click', (e) => {
+    if (!widget.contains(e.target)) widget.classList.remove('open');
+  });
+  document.getElementById('tb-nick').addEventListener('click', () => askNickname('Новый ник:'));
+  const linkBtn = document.getElementById('tb-link');
+  linkBtn.addEventListener('click', () => {
+    const url = location.origin + '/overlay.html';
+    const done = () => { linkBtn.classList.add('ok'); linkBtn.title = 'Ссылка скопирована'; setTimeout(() => { linkBtn.classList.remove('ok'); linkBtn.title = 'Скопировать ссылку для OBS'; }, 1500); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, () => prompt('Ссылка для OBS:', url));
+    else prompt('Ссылка для OBS:', url);
+  });
+  document.getElementById('tb-undo').addEventListener('click', () => document.getElementById('undo-btn').click());
+  document.getElementById('tb-redo').addEventListener('click', () => document.getElementById('redo-btn').click());
+})();
 
 // Вызывается ПЕРЕД любым значимым действием — сервер сохранит снимок
 // состояния "до", чтобы Ctrl+Z мог его вернуть
@@ -915,7 +1093,8 @@ function applyZoomTransform() {
 // при первой загрузке и по кнопке "Сбросить масштаб"
 function fitAndCenter() {
   const rect = canvasViewport.getBoundingClientRect();
-  const scale = Math.min(rect.width / OBS_WIDTH, rect.height / OBS_HEIGHT) * 0.94;
+  const PRELOAD_PAD = 532; // зона предзагрузки вокруг сцены (как в Pogly)
+  const scale = Math.min(rect.width / (OBS_WIDTH + PRELOAD_PAD), rect.height / (OBS_HEIGHT + PRELOAD_PAD)) * 0.94;
   zoomLevel = clamp(scale, ZOOM_MIN, ZOOM_MAX);
   panX = (rect.width - OBS_WIDTH * zoomLevel) / 2;
   panY = (rect.height - OBS_HEIGHT * zoomLevel) / 2;
@@ -3148,8 +3327,17 @@ function renderFoldersList() {
     try { localStorage.setItem('meowlay-tab', name); } catch (e) {}
   }
   window.switchTab = switchTab;
-  document.querySelectorAll('.rail-tab').forEach((t) => {
-    t.addEventListener('click', () => switchTab(t.dataset.tab));
+  document.querySelectorAll('.rail-tab[data-tab]').forEach((t) => {
+    t.addEventListener('click', () => {
+      if (!t.dataset.tab) return;
+      // Повторный клик по открытой вкладке закрывает окно (как в Pogly)
+      if (t.classList.contains('active') && !document.body.classList.contains('sidebar-collapsed')) {
+        setSidebarCollapsed(true);
+        notifyLayoutChanged();
+        return;
+      }
+      switchTab(t.dataset.tab);
+    });
   });
   try {
     const savedTab = localStorage.getItem('meowlay-tab');
@@ -3404,8 +3592,7 @@ function renderFoldersList() {
   });
 
   document.getElementById('elements-add-btn').addEventListener('click', () => {
-    switchTab('add');
-    setTimeout(() => urlInput.focus(), 0);
+    if (window.openPicker) window.openPicker('images'); else switchTab('add');
   });
 
   // --- Подтверждение для необратимых кнопок ---
@@ -4226,6 +4413,203 @@ function renderFoldersList() {
       e.preventDefault();
       send(textEl.value);
     }
+  });
+})();
+
+// --- Окно выбора элементов и создание текста (как в Pogly) ---
+(function () {
+  const picker = document.getElementById('picker');
+  const textpop = document.getElementById('textpop');
+  const pickBtns = document.querySelectorAll('.rail-pick');
+  const selectBtn = document.getElementById('tb-select');
+  let curTab = null;
+
+  function syncSelect() {
+    const winOpen = !document.body.classList.contains('sidebar-collapsed') || !picker.hidden || !textpop.hidden;
+    selectBtn.classList.toggle('active', tool === 'select' && !winOpen);
+  }
+  const mo = new MutationObserver(syncSelect);
+  mo.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  mo.observe(picker, { attributes: true, attributeFilter: ['hidden'] });
+  mo.observe(textpop, { attributes: true, attributeFilter: ['hidden'] });
+  function setToolSafe(t) {
+    tool = t;
+    document.querySelectorAll('.tool-btn').forEach((b) => b.classList.toggle('active', b.dataset.tool === t));
+    try { updateBrushCursor(); } catch (e) {}
+    syncSelect();
+  }
+  function closePops() {
+    picker.hidden = true; textpop.hidden = true; curTab = null;
+    pickBtns.forEach((b) => b.classList.remove('picked'));
+  }
+  function openPicker(name) {
+    textpop.hidden = true;
+    if (!picker.hidden && curTab === name) { closePops(); return; }
+    curTab = name; picker.hidden = false;
+    picker.querySelectorAll('[data-ptab]').forEach((b) => b.classList.toggle('active', b.dataset.ptab === name));
+    picker.querySelectorAll('[data-psec]').forEach((x) => { x.hidden = x.dataset.psec !== name; });
+    pickBtns.forEach((b) => b.classList.toggle('picked', b.dataset.pick === name));
+    if (name === 'images') renderRecent();
+    if (name === 'emotes' && !document.getElementById('pk-emotes').children.length) searchEmotes('');
+    setToolSafe('select');
+  }
+  window.openPicker = openPicker;
+  function openText() {
+    if (!textpop.hidden) { closePops(); return; }
+    closePops(); textpop.hidden = false;
+    pickBtns.forEach((b) => b.classList.toggle('picked', b.dataset.pick === 'text'));
+    setToolSafe('select');
+    setTimeout(() => document.getElementById('tp-text').focus(), 0);
+  }
+  pickBtns.forEach((b) => b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (b.dataset.pick === 'text') openText(); else openPicker(b.dataset.pick);
+  }));
+  picker.querySelectorAll('[data-ptab]').forEach((b) => b.addEventListener('click', () => { curTab = null; openPicker(b.dataset.ptab); }));
+  document.addEventListener('mousedown', (e) => {
+    if (picker.hidden && textpop.hidden) return;
+    if (picker.contains(e.target) || textpop.contains(e.target) || e.target.closest('.rail')) return;
+    closePops();
+  });
+  document.addEventListener('keydown', (e) => {
+    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((e.target.tagName || ''));
+    if (e.key === 'Escape') closePops();
+    if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.code === 'KeyV') { closePops(); setToolSafe('select'); }
+    else if (e.code === 'KeyT') { e.preventDefault(); openText(); }
+    else if (e.code === 'KeyB') { setToolSafe('pen'); switchTab('draw'); }
+  });
+
+  // инструмент "Выбор" не рисует по сцене; вкладка "Рисовать" включает кисть
+  selectBtn.addEventListener('click', () => {
+    closePops();
+    if (!document.body.classList.contains('sidebar-collapsed') && document.querySelector('.rail-tab.active[data-tab="draw"]')) {
+      setSidebarCollapsed(true); window.dispatchEvent(new Event('resize'));
+    }
+    setToolSafe('select');
+  });
+  document.querySelectorAll('.rail-tab[data-tab]').forEach((t) => t.addEventListener('click', () => {
+    closePops();
+    const open = !document.body.classList.contains('sidebar-collapsed') && t.classList.contains('active');
+    if (t.dataset.tab === 'draw' && open) {
+      const act = document.querySelector('.tool-btn.active');
+      setToolSafe(act ? act.dataset.tool : 'pen');
+    } else setToolSafe('select');
+  }));
+  document.querySelectorAll('.tool-btn').forEach((b) => b.addEventListener('click', syncSelect));
+  setToolSafe('select');
+
+  // ---- создание элементов ----
+  function newItem(extra) {
+    const spawn = getSpawnPosition();
+    return Object.assign({ id: 'id' + Date.now() + Math.random().toString(36).slice(2, 7), x: spawn.x, y: spawn.y, w: 0.3, h: 0.3, z: 9999, hidden: false, loop: false, volume: 0 }, extra);
+  }
+  function pushItem(item) {
+    if (!authed) { alert('Сначала дождись подключения (правильный пароль)'); return; }
+    checkpoint();
+    socket.emit('add-media', item);
+    createOrUpdateMedia(item);
+    sortMediaList();
+    try { selectOnly(item.id); } catch (e) {}
+  }
+  function clickAdd(type, url, proxy) {
+    document.getElementById('media-type').value = type;
+    document.getElementById('media-url').value = url;
+    document.getElementById('media-browser-proxy').checked = !!proxy;
+    document.getElementById('add-media-btn').click();
+  }
+
+  // картинки
+  const imgFile = document.getElementById('pk-img-file'), vidFile = document.getElementById('pk-vid-file'), mainFile = document.getElementById('media-file');
+  function passFiles(input) {
+    const dt = new DataTransfer();
+    Array.from(input.files).forEach((f) => dt.items.add(f));
+    if (!dt.files.length) return;
+    mainFile.files = dt.files; mainFile.dispatchEvent(new Event('change')); input.value = ''; closePops();
+  }
+  imgFile.addEventListener('change', () => passFiles(imgFile));
+  vidFile.addEventListener('change', () => passFiles(vidFile));
+  const drop = document.getElementById('pk-drop');
+  drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('over'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+  const addImgUrl = () => {
+    const v = document.getElementById('pk-img-url').value.trim(); if (!v) return;
+    clickAdd('image', v, false); document.getElementById('pk-img-url').value = ''; closePops();
+  };
+  document.getElementById('pk-img-add').addEventListener('click', addImgUrl);
+  document.getElementById('pk-img-url').addEventListener('keydown', (e) => { if (e.key === 'Enter') addImgUrl(); });
+
+  function renderRecent() {
+    const box = document.getElementById('pk-recent'); box.innerHTML = '';
+    const seen = new Set();
+    Object.values(mediaItemsLocal).filter((it) => it.type === 'image' && it.url && !seen.has(it.url) && seen.add(it.url)).slice(-30).reverse().forEach((it) => {
+      const b = document.createElement('button'); b.className = 'pk-thumb'; b.title = it.label || '';
+      const im = document.createElement('img'); im.src = it.url; im.loading = 'lazy'; b.appendChild(im);
+      b.addEventListener('click', () => { pushItem(newItem({ type: 'image', url: it.url, w: it.w, h: it.h, label: it.label })); closePops(); });
+      box.appendChild(b);
+    });
+    document.getElementById('pk-recent-title').style.display = box.children.length ? '' : 'none';
+  }
+
+  // эмодзи 7TV
+  const emBox = document.getElementById('pk-emotes'), emNote = document.getElementById('pk-emote-note');
+  async function searchEmotes(q) {
+    emNote.textContent = 'Ищу…'; emBox.innerHTML = '';
+    try {
+      const r = await fetch('https://7tv.io/v3/gql', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
+        query: 'query($q:String!){emotes(query:$q,page:1,limit:40,sort:{value:"popularity",order:DESCENDING}){items{id name}}}', variables: { q } }) });
+      const j = await r.json();
+      const items = (j.data && j.data.emotes && j.data.emotes.items) || [];
+      emNote.textContent = items.length ? '' : 'Ничего не найдено';
+      items.forEach((em) => {
+        const b = document.createElement('button'); b.className = 'pk-thumb'; b.title = em.name;
+        const im = document.createElement('img'); im.src = 'https://cdn.7tv.app/emote/' + em.id + '/2x.webp'; im.loading = 'lazy'; b.appendChild(im);
+        b.addEventListener('click', () => addEmote(em));
+        emBox.appendChild(b);
+      });
+    } catch (e) { emNote.textContent = '7TV недоступен. Проверь интернет или VPN.'; }
+  }
+  async function addEmote(em) {
+    const url = 'https://cdn.7tv.app/emote/' + em.id + '/4x.webp';
+    let finalUrl = url;
+    try { // сохраняем на свой сервер, чтобы оверлей не зависел от 7TV
+      const blob = await (await fetch(url)).blob();
+      finalUrl = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(blob); });
+    } catch (e) {}
+    pushItem(newItem({ type: 'image', url: finalUrl, w: 0.1, h: 0.178, label: em.name }));
+    closePops();
+  }
+  document.getElementById('pk-emote-go').addEventListener('click', () => searchEmotes(document.getElementById('pk-emote-q').value.trim()));
+  document.getElementById('pk-emote-q').addEventListener('keydown', (e) => { if (e.key === 'Enter') searchEmotes(e.target.value.trim()); });
+
+  // виджеты (сайт / OBS Ninja)
+  let wtype = 'browser';
+  document.querySelectorAll('#pk-wtype button').forEach((b) => b.addEventListener('click', () => {
+    wtype = b.dataset.t;
+    document.querySelectorAll('#pk-wtype button').forEach((x) => x.classList.toggle('active', x === b));
+    document.getElementById('pk-w-url').placeholder = wtype === 'ninja' ? 'Ссылка OBS Ninja' : 'Ссылка на сайт (чат, донаты, виджет)';
+  }));
+  const addW = () => {
+    const v = document.getElementById('pk-w-url').value.trim(); if (!v) return;
+    clickAdd(wtype, v, document.getElementById('pk-w-proxy').checked); document.getElementById('pk-w-url').value = ''; closePops();
+  };
+  document.getElementById('pk-w-add').addEventListener('click', addW);
+  document.getElementById('pk-w-url').addEventListener('keydown', (e) => { if (e.key === 'Enter') addW(); });
+
+  // видео и YouTube
+  const addYt = () => {
+    const v = document.getElementById('pk-yt-url').value.trim(); if (!v) return;
+    clickAdd('youtube', v, false); document.getElementById('pk-yt-url').value = ''; closePops();
+  };
+  document.getElementById('pk-yt-add').addEventListener('click', addYt);
+  document.getElementById('pk-yt-url').addEventListener('keydown', (e) => { if (e.key === 'Enter') addYt(); });
+  document.getElementById('pk-timer').addEventListener('click', () => { closePops(); switchTab('add'); });
+
+  // текст
+  document.getElementById('tp-add').addEventListener('click', () => {
+    const text = document.getElementById('tp-text').value.trim(); if (!text) return;
+    pushItem(newItem({ type: 'text', text, color: document.getElementById('tp-color').value, fontScale: parseFloat(document.getElementById('tp-size').value) || 0.6, w: 0.3, h: 0.12 }));
+    document.getElementById('tp-text').value = ''; closePops();
   });
 })();
 </script>
