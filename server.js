@@ -697,6 +697,12 @@ io.on('connection', (socket) => {
     socket.broadcast.emit('browser-control', data);
   });
 
+  // Кнопка "Перезагрузить картинки": оверлей заново грузит то, что не загрузилось
+  socket.on('media-reload', () => {
+    if (!authed) return;
+    socket.broadcast.emit('media-reload');
+  });
+
   // --- ТТС ---
   // Отправителю отвечаем 'tts-result' (ок/ошибка), а сам клип рассылаем
   // всем остальным — оверлей его проиграет, другие панели покажут в истории
