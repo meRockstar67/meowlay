@@ -1017,16 +1017,21 @@ socket.on('auth-result', (result) => {
     statusEl.textContent = OFFLINE ? '🧪 Локальный режим, без сервера' : '🧪 Тестовый режим';
     if (!nickname) socket.emit('set-nickname', 'тест');
   } else if (nickname) {
+    try { localStorage.setItem('meowlay-nick', nickname); } catch (e) {}
     statusEl.textContent = nickname;
     onlineWidget.style.display = '';
   } else {
-    // Первый заход с этого IP — просим придумать ник, дальше он будет
-    // подставляться сам без повторного ввода
-    askNickname('Придумай ник (будет виден в списке онлайн):');
+    // Сервер не узнал IP (сменился интернет/VPN) — берём ник, сохранённый в этом браузере,
+    // и спрашиваем только если его нет совсем
+    let savedNick = null;
+    try { savedNick = localStorage.getItem('meowlay-nick'); } catch (e) {}
+    if (savedNick) socket.emit('set-nickname', savedNick);
+    else askNickname('Придумай ник (будет виден в списке онлайн):');
   }
 });
 
 socket.on('nickname-set', (nickname) => {
+  try { localStorage.setItem('meowlay-nick', nickname); } catch (e) {}
   statusEl.textContent = nickname;
   onlineWidget.style.display = '';
 });
